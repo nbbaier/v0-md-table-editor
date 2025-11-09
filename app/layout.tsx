@@ -4,8 +4,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-	title: "v0 App",
-	description: "Created with v0",
+	title: "Markdown Table Editor",
+	description: "A visual editor for markdown tables with real-time preview and formatting support",
 	generator: "v0.app",
 };
 
