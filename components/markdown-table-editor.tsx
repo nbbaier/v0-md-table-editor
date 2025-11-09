@@ -286,9 +286,14 @@ export default function MarkdownTableEditor() {
 	};
 
 	const copyToClipboard = async () => {
-		await navigator.clipboard.writeText(markdown);
-		setCopied(true);
-		setTimeout(() => setCopied(false), 2000);
+		try {
+			await navigator.clipboard.writeText(markdown);
+			setCopied(true);
+			setTimeout(() => setCopied(false), 2000);
+		} catch (error) {
+			console.error("Failed to copy to clipboard:", error);
+			// Fallback: show error state or use alternative copy method
+		}
 	};
 
 	return (
