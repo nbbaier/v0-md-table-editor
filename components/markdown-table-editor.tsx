@@ -389,7 +389,7 @@ export default function MarkdownTableEditor() {
 						<TabsContent value="preview">
 							<div
 								className="markdown-body min-h-[200px] overflow-x-auto p-4 rounded-md"
-								// biome-ignore lint/security/noDangerouslySetInnerHtml: idc
+								// biome-ignore lint/security/noDangerouslySetInnerHtml: HTML is sanitized by remark/rehype processors
 								dangerouslySetInnerHTML={{ __html: renderedHtml }}
 							/>
 						</TabsContent>
