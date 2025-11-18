@@ -370,7 +370,7 @@ export default function MarkdownTableEditor() {
 					</div>
 					<Tabs
 						value={markdownTab}
-						onValueChange={(value: MarkdownTab) =>
+						onValueChange={(value: string) =>
 							setMarkdownTab(value as MarkdownTab)
 						}
 					>
