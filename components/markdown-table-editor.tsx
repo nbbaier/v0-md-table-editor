@@ -9,8 +9,10 @@ import {
 	Monitor,
 	Moon,
 	Plus,
+	Redo2,
 	Sun,
 	Trash2,
+	Undo2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import type React from "react";
@@ -31,6 +33,8 @@ const defaultMarkdown = `| Name | Age | City |
 | Jane | 30 | LA |
 | Bob | 35 | Chicago |`;
 
+const STORAGE_KEY = "markdown-table-editor-content";
+
 type Alignment = "left" | "center" | "right";
 type MarkdownTab = "edit" | "preview";
 
@@ -40,7 +44,13 @@ let nextColId = 0;
 export default function MarkdownTableEditor() {
 	const { theme, setTheme } = useTheme();
 	const [mounted, setMounted] = useState(false);
-	const [markdown, setMarkdown] = useState(defaultMarkdown);
+	const [markdown, setMarkdown] = useState(() => {
+		if (typeof window !== "undefined") {
+			const saved = localStorage.getItem(STORAGE_KEY);
+			return saved || defaultMarkdown;
+		}
+		return defaultMarkdown;
+	});
 	const [tableData, setTableData] = useState<string[][]>([]);
 	const [alignments, setAlignments] = useState<Alignment[]>([]);
 	const [rowIds, setRowIds] = useState<string[]>([]);
@@ -48,10 +58,36 @@ export default function MarkdownTableEditor() {
 	const [copied, setCopied] = useState(false);
 	const [markdownTab, setMarkdownTab] = useState<MarkdownTab>("edit");
 	const [renderedHtml, setRenderedHtml] = useState("");
+	const [history, setHistory] = useState<string[]>([markdown]);
+	const [historyIndex, setHistoryIndex] = useState(0);
+	const [isUndoRedo, setIsUndoRedo] = useState(false);
 
 	useEffect(() => {
 		setMounted(true);
 	}, []);
+
+	// Auto-save to localStorage
+	useEffect(() => {
+		if (typeof window !== "undefined") {
+			localStorage.setItem(STORAGE_KEY, markdown);
+		}
+	}, [markdown]);
+
+	// Track history for undo/redo
+	useEffect(() => {
+		if (isUndoRedo) {
+			setIsUndoRedo(false);
+			return;
+		}
+
+		// Only add to history if markdown actually changed
+		if (history[historyIndex] !== markdown) {
+			const newHistory = history.slice(0, historyIndex + 1);
+			newHistory.push(markdown);
+			setHistory(newHistory);
+			setHistoryIndex(newHistory.length - 1);
+		}
+	}, [markdown]);
 
 	useEffect(() => {
 		const lines = markdown
@@ -116,6 +152,26 @@ export default function MarkdownTableEditor() {
 
 		renderMarkdown();
 	}, [markdown]);
+
+	// Keyboard shortcuts for undo/redo
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === "z") {
+				e.preventDefault();
+				undo();
+			} else if (
+				(e.metaKey || e.ctrlKey) &&
+				e.shiftKey &&
+				e.key === "z"
+			) {
+				e.preventDefault();
+				redo();
+			}
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [historyIndex, history]);
 
 	const updateMarkdown = (data: string[][], aligns: Alignment[]) => {
 		if (data.length === 0) return;
@@ -266,6 +322,12 @@ export default function MarkdownTableEditor() {
 
 	const deleteRow = (rowIndex: number) => {
 		if (rowIndex === 0) return;
+
+		const confirmed = window.confirm(
+			"Are you sure you want to delete this row? This action cannot be undone."
+		);
+		if (!confirmed) return;
+
 		const newData = tableData.filter((_, index) => index !== rowIndex);
 		const newRowIds = rowIds.filter((_, index) => index !== rowIndex);
 		setTableData(newData);
@@ -274,6 +336,11 @@ export default function MarkdownTableEditor() {
 	};
 
 	const deleteColumn = (colIndex: number) => {
+		const confirmed = window.confirm(
+			"Are you sure you want to delete this column? This action cannot be undone."
+		);
+		if (!confirmed) return;
+
 		const newData = tableData.map((row) =>
 			row.filter((_, index) => index !== colIndex),
 		);
@@ -283,6 +350,22 @@ export default function MarkdownTableEditor() {
 		setAlignments(newAlignments);
 		setColIds(newColIds);
 		updateMarkdown(newData, newAlignments);
+	};
+
+	const undo = () => {
+		if (historyIndex > 0) {
+			setIsUndoRedo(true);
+			setHistoryIndex(historyIndex - 1);
+			setMarkdown(history[historyIndex - 1]);
+		}
+	};
+
+	const redo = () => {
+		if (historyIndex < history.length - 1) {
+			setIsUndoRedo(true);
+			setHistoryIndex(historyIndex + 1);
+			setMarkdown(history[historyIndex + 1]);
+		}
 	};
 
 	const copyToClipboard = async () => {
@@ -349,24 +432,46 @@ export default function MarkdownTableEditor() {
 				<Card className="p-6 min-w-0">
 					<div className="flex items-center justify-between mb-4">
 						<h2 className="text-xl font-semibold">Markdown Source</h2>
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={copyToClipboard}
-							className="gap-2 bg-transparent"
-						>
-							{copied ? (
-								<>
-									<Check className="h-4 w-4" />
-									{"Copied"}
-								</>
-							) : (
-								<>
-									<Copy className="h-4 w-4" />
-									{"Copy"}
-								</>
-							)}
-						</Button>
+						<div className="flex gap-2">
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={undo}
+								disabled={historyIndex === 0}
+								className="gap-2 bg-transparent"
+								title="Undo (Cmd/Ctrl+Z)"
+							>
+								<Undo2 className="h-4 w-4" />
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={redo}
+								disabled={historyIndex === history.length - 1}
+								className="gap-2 bg-transparent"
+								title="Redo (Cmd/Ctrl+Shift+Z)"
+							>
+								<Redo2 className="h-4 w-4" />
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={copyToClipboard}
+								className="gap-2 bg-transparent"
+							>
+								{copied ? (
+									<>
+										<Check className="h-4 w-4" />
+										{"Copied"}
+									</>
+								) : (
+									<>
+										<Copy className="h-4 w-4" />
+										{"Copy"}
+									</>
+								)}
+							</Button>
+						</div>
 					</div>
 					<Tabs
 						value={markdownTab}
