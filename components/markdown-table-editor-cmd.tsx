@@ -532,6 +532,17 @@ export default function MarkdownTableEditorCmd() {
 		}
 	};
 
+	const resetTable = () => {
+		const confirmed = window.confirm(
+			"Are you sure you want to reset the table to default? This will clear all your data and cannot be undone."
+		);
+		if (!confirmed) return;
+
+		localStorage.removeItem(STORAGE_KEY);
+		setMarkdown(defaultMarkdown);
+		success("Table reset to default");
+	};
+
 	// Command palette commands
 	const commands: CommandItem[] = [
 		// Edit commands
@@ -572,6 +583,13 @@ export default function MarkdownTableEditorCmd() {
 			description: "Add a new column at the end of the table",
 			category: "Table",
 			action: addColumn,
+		},
+		{
+			id: "reset-table",
+			label: "Reset Table",
+			description: "Clear all data and reset to default table",
+			category: "Table",
+			action: resetTable,
 		},
 		// Import/Export
 		{
