@@ -6,6 +6,7 @@ import {
 	AlignRight,
 	Check,
 	Copy,
+	Download,
 	Monitor,
 	Moon,
 	Plus,
@@ -13,10 +14,11 @@ import {
 	Sun,
 	Trash2,
 	Undo2,
+	Upload,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import rehypeStringify from "rehype-stringify";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
@@ -61,6 +63,7 @@ export default function MarkdownTableEditor() {
 	const [history, setHistory] = useState<string[]>([markdown]);
 	const [historyIndex, setHistoryIndex] = useState(0);
 	const [isUndoRedo, setIsUndoRedo] = useState(false);
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		setMounted(true);
@@ -379,6 +382,121 @@ export default function MarkdownTableEditor() {
 		}
 	};
 
+	const parseCSV = (csvText: string): string[][] => {
+		const lines = csvText.trim().split("\n");
+		const result: string[][] = [];
+
+		for (const line of lines) {
+			const row: string[] = [];
+			let current = "";
+			let inQuotes = false;
+
+			for (let i = 0; i < line.length; i++) {
+				const char = line[i];
+				const nextChar = line[i + 1];
+
+				if (char === '"') {
+					if (inQuotes && nextChar === '"') {
+						// Escaped quote
+						current += '"';
+						i++; // Skip next quote
+					} else {
+						// Toggle quote state
+						inQuotes = !inQuotes;
+					}
+				} else if (char === "," && !inQuotes) {
+					// End of field
+					row.push(current.trim());
+					current = "";
+				} else {
+					current += char;
+				}
+			}
+			// Add last field
+			row.push(current.trim());
+			result.push(row);
+		}
+
+		return result;
+	};
+
+	const importCSV = () => {
+		fileInputRef.current?.click();
+	};
+
+	const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+
+		const reader = new FileReader();
+		reader.onload = (event) => {
+			const csvText = event.target?.result as string;
+			try {
+				const parsedData = parseCSV(csvText);
+				if (parsedData.length === 0) {
+					alert("The CSV file appears to be empty.");
+					return;
+				}
+
+				// Create markdown from CSV data
+				const headers = parsedData[0];
+				const rows = parsedData.slice(1);
+				const separator = headers.map(() => "---").join(" | ");
+				const headerLine = headers.join(" | ");
+				const rowLines = rows.map((row) => row.join(" | "));
+
+				const newMarkdown =
+					rows.length > 0
+						? `| ${headerLine} |\n| ${separator} |\n| ${rowLines.join(" |\n| ")} |`
+						: `| ${headerLine} |\n| ${separator} |`;
+
+				setMarkdown(newMarkdown);
+			} catch (error) {
+				console.error("Error parsing CSV:", error);
+				alert("Failed to parse CSV file. Please check the file format.");
+			}
+		};
+
+		reader.readAsText(file);
+		// Reset input so same file can be imported again
+		e.target.value = "";
+	};
+
+	const exportCSV = () => {
+		if (tableData.length === 0) {
+			alert("No table data to export.");
+			return;
+		}
+
+		// Convert table data to CSV
+		const csvRows = tableData.map((row) => {
+			return row
+				.map((cell) => {
+					// Escape quotes and wrap in quotes if contains comma or quote
+					if (cell.includes(",") || cell.includes('"') || cell.includes("\n")) {
+						return `"${cell.replace(/"/g, '""')}"`;
+					}
+					return cell;
+				})
+				.join(",");
+		});
+
+		const csvContent = csvRows.join("\n");
+
+		// Create download link
+		const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+		const link = document.createElement("a");
+		const url = URL.createObjectURL(blob);
+
+		link.setAttribute("href", url);
+		link.setAttribute("download", "table.csv");
+		link.style.visibility = "hidden";
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
+	};
+
 	return (
 		<div className="container mx-auto p-6 max-w-7xl overflow-hidden">
 			<div className="mb-8">
@@ -509,6 +627,27 @@ export default function MarkdownTableEditor() {
 							<Button
 								variant="outline"
 								size="sm"
+								onClick={importCSV}
+								className="gap-2 bg-transparent"
+								title="Import CSV file"
+							>
+								<Upload className="h-4 w-4" />
+								{"Import CSV"}
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={exportCSV}
+								disabled={tableData.length === 0}
+								className="gap-2 bg-transparent"
+								title="Export to CSV file"
+							>
+								<Download className="h-4 w-4" />
+								{"Export CSV"}
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
 								onClick={addRow}
 								disabled={tableData.length === 0}
 								className="gap-2 bg-transparent"
@@ -528,6 +667,13 @@ export default function MarkdownTableEditor() {
 							</Button>
 						</div>
 					</div>
+					<input
+						ref={fileInputRef}
+						type="file"
+						accept=".csv"
+						onChange={handleFileImport}
+						style={{ display: "none" }}
+					/>
 
 					{tableData.length > 0 ? (
 						<div className="overflow-x-auto overflow-y-auto max-h-[500px]">
