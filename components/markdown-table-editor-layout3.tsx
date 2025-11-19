@@ -45,7 +45,7 @@ type MarkdownTab = "edit" | "preview";
 let nextRowId = 0;
 let nextColId = 0;
 
-export default function MarkdownTableEditor() {
+export default function MarkdownTableEditorLayout3() {
 	const { theme, setTheme } = useTheme();
 	const { toasts, closeToast, success, error, info } = useToast();
 	const [mounted, setMounted] = useState(false);
@@ -529,9 +529,7 @@ export default function MarkdownTableEditor() {
 							Markdown Table Editor
 						</h1>
 						<p className="text-muted-foreground text-lg">
-							{
-								"Paste your markdown table, edit it visually, and see changes in real-time"
-							}
+							Vertical layout - markdown source stacked above visual editor
 						</p>
 					</div>
 					{mounted && (
@@ -569,7 +567,7 @@ export default function MarkdownTableEditor() {
 				<LayoutNav />
 			</div>
 
-			<div className="grid lg:grid-cols-2 gap-6 min-w-0">
+			<div className="flex flex-col gap-6 min-w-0">
 				{/* Markdown Input */}
 				<Card className="p-6 min-w-0">
 					<div className="flex items-center justify-between mb-4">
