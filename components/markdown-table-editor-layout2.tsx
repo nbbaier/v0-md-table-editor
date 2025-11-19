@@ -41,14 +41,16 @@ const STORAGE_KEY = "markdown-table-editor-content";
 
 type Alignment = "left" | "center" | "right";
 type MarkdownTab = "edit" | "preview";
+type MainTab = "markdown" | "visual" | "preview";
 
 let nextRowId = 0;
 let nextColId = 0;
 
-export default function MarkdownTableEditor() {
+export default function MarkdownTableEditorLayout2() {
 	const { theme, setTheme } = useTheme();
 	const { toasts, closeToast, success, error, info } = useToast();
 	const [mounted, setMounted] = useState(false);
+	const [mainTab, setMainTab] = useState<MainTab>("visual");
 	const [markdown, setMarkdown] = useState(() => {
 		if (typeof window !== "undefined") {
 			const saved = localStorage.getItem(STORAGE_KEY);
@@ -61,39 +63,37 @@ export default function MarkdownTableEditor() {
 	const [rowIds, setRowIds] = useState<string[]>([]);
 	const [colIds, setColIds] = useState<string[]>([]);
 	const [copied, setCopied] = useState(false);
-	const [markdownTab, setMarkdownTab] = useState<MarkdownTab>("edit");
 	const [renderedHtml, setRenderedHtml] = useState("");
 	const [history, setHistory] = useState<string[]>([markdown]);
 	const [historyIndex, setHistoryIndex] = useState(0);
 	const [isUndoRedo, setIsUndoRedo] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
+	// ... (include all the same useEffect hooks and functions from the original component)
+	// I'll include the key functions here for brevity
+
 	useEffect(() => {
 		setMounted(true);
 	}, []);
 
-	// Auto-save to localStorage
 	useEffect(() => {
 		if (typeof window !== "undefined") {
 			localStorage.setItem(STORAGE_KEY, markdown);
 		}
 	}, [markdown]);
 
-	// Track history for undo/redo
 	useEffect(() => {
 		if (isUndoRedo) {
 			setIsUndoRedo(false);
 			return;
 		}
-
-		// Only add to history if markdown actually changed
 		if (history[historyIndex] !== markdown) {
 			const newHistory = history.slice(0, historyIndex + 1);
 			newHistory.push(markdown);
 			setHistory(newHistory);
 			setHistoryIndex(newHistory.length - 1);
 		}
-	}, [markdown]);
+	}, [markdown, history, historyIndex, isUndoRedo]);
 
 	useEffect(() => {
 		const lines = markdown
@@ -131,10 +131,8 @@ export default function MarkdownTableEditor() {
 			);
 
 		setTableData(parsedData);
-
 		const newRowIds = parsedData.map(() => `row-${nextRowId++}`);
 		setRowIds(newRowIds);
-
 		const newColIds = separators.map(() => `col-${nextColId++}`);
 		setColIds(newColIds);
 	}, [markdown]);
@@ -148,7 +146,6 @@ export default function MarkdownTableEditor() {
 					.use(remarkRehype)
 					.use(rehypeStringify)
 					.process(markdown);
-
 				setRenderedHtml(String(file));
 			} catch (err) {
 				console.error("Error rendering markdown:", err);
@@ -156,36 +153,27 @@ export default function MarkdownTableEditor() {
 				error("Failed to render markdown preview");
 			}
 		};
-
 		renderMarkdown();
 	}, [markdown, error]);
 
-	// Keyboard shortcuts for undo/redo
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === "z") {
 				e.preventDefault();
 				undo();
-			} else if (
-				(e.metaKey || e.ctrlKey) &&
-				e.shiftKey &&
-				e.key === "z"
-			) {
+			} else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "z") {
 				e.preventDefault();
 				redo();
 			}
 		};
-
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [historyIndex, history]);
 
 	const updateMarkdown = (data: string[][], aligns: Alignment[]) => {
 		if (data.length === 0) return;
-
 		const headers = data[0];
 		const rows = data.slice(1);
-
 		const separator = headers
 			.map((_, index) => {
 				const align = aligns[index] || "left";
@@ -194,10 +182,8 @@ export default function MarkdownTableEditor() {
 				return "---";
 			})
 			.join(" | ");
-
 		const headerLine = headers.join(" | ");
 		const rowLines = rows.map((row) => row.join(" | "));
-
 		const newMarkdown =
 			rows.length > 0
 				? `| ${headerLine} |\n| ${separator} |\n| ${rowLines.join(" |\n| ")} |`
@@ -214,16 +200,12 @@ export default function MarkdownTableEditor() {
 		!isBold(text);
 
 	const toggleBold = (text: string) => {
-		if (isBold(text)) {
-			return text.slice(2, -2);
-		}
+		if (isBold(text)) return text.slice(2, -2);
 		return `**${text}**`;
 	};
 
 	const toggleItalic = (text: string) => {
-		if (isItalic(text)) {
-			return text.slice(1, -1);
-		}
+		if (isItalic(text)) return text.slice(1, -1);
 		return `*${text}*`;
 	};
 
@@ -269,16 +251,13 @@ export default function MarkdownTableEditor() {
 			handleToggleBold(rowIndex, colIndex);
 			return;
 		}
-
 		if ((e.metaKey || e.ctrlKey) && e.key === "i") {
 			e.preventDefault();
 			handleToggleItalic(rowIndex, colIndex);
 			return;
 		}
-
 		let targetRow = rowIndex;
 		let targetCol = colIndex;
-
 		if (e.key === "Enter" || e.key === "ArrowDown") {
 			e.preventDefault();
 			targetRow = rowIndex + 1;
@@ -294,7 +273,6 @@ export default function MarkdownTableEditor() {
 		} else {
 			return;
 		}
-
 		if (
 			targetRow >= 0 &&
 			targetRow < tableData.length &&
@@ -331,12 +309,8 @@ export default function MarkdownTableEditor() {
 
 	const deleteRow = (rowIndex: number) => {
 		if (rowIndex === 0) return;
-
-		const confirmed = window.confirm(
-			"Are you sure you want to delete this row?"
-		);
+		const confirmed = window.confirm("Are you sure you want to delete this row?");
 		if (!confirmed) return;
-
 		const newData = tableData.filter((_, index) => index !== rowIndex);
 		const newRowIds = rowIds.filter((_, index) => index !== rowIndex);
 		setTableData(newData);
@@ -347,10 +321,9 @@ export default function MarkdownTableEditor() {
 
 	const deleteColumn = (colIndex: number) => {
 		const confirmed = window.confirm(
-			"Are you sure you want to delete this column?"
+			"Are you sure you want to delete this column?",
 		);
 		if (!confirmed) return;
-
 		const newData = tableData.map((row) =>
 			row.filter((_, index) => index !== colIndex),
 		);
@@ -396,38 +369,30 @@ export default function MarkdownTableEditor() {
 	const parseCSV = (csvText: string): string[][] => {
 		const lines = csvText.trim().split("\n");
 		const result: string[][] = [];
-
 		for (const line of lines) {
 			const row: string[] = [];
 			let current = "";
 			let inQuotes = false;
-
 			for (let i = 0; i < line.length; i++) {
 				const char = line[i];
 				const nextChar = line[i + 1];
-
 				if (char === '"') {
 					if (inQuotes && nextChar === '"') {
-						// Escaped quote
 						current += '"';
-						i++; // Skip next quote
+						i++;
 					} else {
-						// Toggle quote state
 						inQuotes = !inQuotes;
 					}
 				} else if (char === "," && !inQuotes) {
-					// End of field
 					row.push(current.trim());
 					current = "";
 				} else {
 					current += char;
 				}
 			}
-			// Add last field
 			row.push(current.trim());
 			result.push(row);
 		}
-
 		return result;
 	};
 
@@ -438,7 +403,6 @@ export default function MarkdownTableEditor() {
 	const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
-
 		const reader = new FileReader();
 		reader.onload = (event) => {
 			const csvText = event.target?.result as string;
@@ -448,33 +412,28 @@ export default function MarkdownTableEditor() {
 					error("The CSV file appears to be empty.");
 					return;
 				}
-
-				// Create markdown from CSV data
 				const headers = parsedData[0];
 				const rows = parsedData.slice(1);
 				const separator = headers.map(() => "---").join(" | ");
 				const headerLine = headers.join(" | ");
 				const rowLines = rows.map((row) => row.join(" | "));
-
 				const newMarkdown =
 					rows.length > 0
 						? `| ${headerLine} |\n| ${separator} |\n| ${rowLines.join(" |\n| ")} |`
 						: `| ${headerLine} |\n| ${separator} |`;
-
 				setMarkdown(newMarkdown);
-				success(`Imported CSV with ${parsedData.length} rows and ${headers.length} columns`);
+				success(
+					`Imported CSV with ${parsedData.length} rows and ${headers.length} columns`,
+				);
 			} catch (err) {
 				console.error("Error parsing CSV:", err);
 				error("Failed to parse CSV file. Please check the file format.");
 			}
 		};
-
 		reader.onerror = () => {
 			error("Failed to read the file. Please try again.");
 		};
-
 		reader.readAsText(file);
-		// Reset input so same file can be imported again
 		e.target.value = "";
 	};
 
@@ -483,13 +442,10 @@ export default function MarkdownTableEditor() {
 			error("No table data to export.");
 			return;
 		}
-
 		try {
-			// Convert table data to CSV
 			const csvRows = tableData.map((row) => {
 				return row
 					.map((cell) => {
-						// Escape quotes and wrap in quotes if contains comma or quote
 						if (cell.includes(",") || cell.includes('"') || cell.includes("\n")) {
 							return `"${cell.replace(/"/g, '""')}"`;
 						}
@@ -497,14 +453,10 @@ export default function MarkdownTableEditor() {
 					})
 					.join(",");
 			});
-
 			const csvContent = csvRows.join("\n");
-
-			// Create download link
 			const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
 			const link = document.createElement("a");
 			const url = URL.createObjectURL(blob);
-
 			link.setAttribute("href", url);
 			link.setAttribute("download", "table.csv");
 			link.style.visibility = "hidden";
@@ -512,7 +464,6 @@ export default function MarkdownTableEditor() {
 			link.click();
 			document.body.removeChild(link);
 			URL.revokeObjectURL(url);
-
 			success("CSV file downloaded successfully!");
 		} catch (err) {
 			console.error("Error exporting CSV:", err);
@@ -529,9 +480,7 @@ export default function MarkdownTableEditor() {
 							Markdown Table Editor
 						</h1>
 						<p className="text-muted-foreground text-lg">
-							{
-								"Paste your markdown table, edit it visually, and see changes in real-time"
-							}
+							Tabbed layout - switch between markdown, visual editor, and preview
 						</p>
 					</div>
 					{mounted && (
@@ -569,256 +518,242 @@ export default function MarkdownTableEditor() {
 				<LayoutNav />
 			</div>
 
-			<div className="grid lg:grid-cols-2 gap-6 min-w-0">
-				{/* Markdown Input */}
-				<Card className="p-6 min-w-0">
-					<div className="flex items-center justify-between mb-4">
-						<h2 className="text-xl font-semibold">Markdown Source</h2>
-						<div className="flex gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={undo}
-								disabled={historyIndex === 0}
-								className="gap-2 bg-transparent"
-								title="Undo (Cmd/Ctrl+Z)"
-							>
-								<Undo2 className="h-4 w-4" />
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={redo}
-								disabled={historyIndex === history.length - 1}
-								className="gap-2 bg-transparent"
-								title="Redo (Cmd/Ctrl+Shift+Z)"
-							>
-								<Redo2 className="h-4 w-4" />
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={copyToClipboard}
-								className="gap-2 bg-transparent"
-							>
-								{copied ? (
-									<>
-										<Check className="h-4 w-4" />
-										{"Copied"}
-									</>
-								) : (
-									<>
-										<Copy className="h-4 w-4" />
-										{"Copy"}
-									</>
-								)}
-							</Button>
-						</div>
-					</div>
-					<Tabs
-						value={markdownTab}
-						onValueChange={(value: string) =>
-							setMarkdownTab(value as MarkdownTab)
-						}
-					>
-						<TabsList>
-							<TabsTrigger value="edit">Edit</TabsTrigger>
-							<TabsTrigger value="preview">Preview</TabsTrigger>
-						</TabsList>
-						<TabsContent value="edit">
-							<Textarea
-								value={markdown}
-								onChange={(e) => setMarkdown(e.target.value)}
-								className="font-mono text-sm min-h-[200px] resize-y"
-								placeholder="Paste your markdown table here..."
-							/>
-						</TabsContent>
-						<TabsContent value="preview">
-							<div
-								className="markdown-body min-h-[200px] overflow-x-auto p-4 rounded-md"
-								// biome-ignore lint/security/noDangerouslySetInnerHtml: HTML is sanitized by remark/rehype processors
-								dangerouslySetInnerHTML={{ __html: renderedHtml }}
-							/>
-						</TabsContent>
-					</Tabs>
-				</Card>
+			<Tabs value={mainTab} onValueChange={(value) => setMainTab(value as MainTab)} className="w-full">
+				<TabsList className="grid w-full grid-cols-3 mb-6">
+					<TabsTrigger value="markdown">Markdown Source</TabsTrigger>
+					<TabsTrigger value="visual">Visual Editor</TabsTrigger>
+					<TabsTrigger value="preview">Preview</TabsTrigger>
+				</TabsList>
 
-				{/* Visual Table Editor */}
-				<Card className="p-6 min-w-0">
-					<div className="flex items-center justify-between mb-4">
-						<h2 className="text-xl font-semibold">Visual Editor</h2>
-						<div className="flex gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={importCSV}
-								className="gap-2 bg-transparent"
-								title="Import CSV file"
-							>
-								<Upload className="h-4 w-4" />
-								{"Import CSV"}
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={exportCSV}
-								disabled={tableData.length === 0}
-								className="gap-2 bg-transparent"
-								title="Export to CSV file"
-							>
-								<Download className="h-4 w-4" />
-								{"Export CSV"}
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={addRow}
-								disabled={tableData.length === 0}
-								className="gap-2 bg-transparent"
-							>
-								<Plus className="h-4 w-4" />
-								{"Row"}
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={addColumn}
-								disabled={tableData.length === 0}
-								className="gap-2 bg-transparent"
-							>
-								<Plus className="h-4 w-4" />
-								{"Column"}
-							</Button>
+				<TabsContent value="markdown" className="mt-0">
+					<Card className="p-6">
+						<div className="flex items-center justify-between mb-4">
+							<h2 className="text-xl font-semibold">Markdown Source</h2>
+							<div className="flex gap-2">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={undo}
+									disabled={historyIndex === 0}
+									className="gap-2 bg-transparent"
+									title="Undo (Cmd/Ctrl+Z)"
+								>
+									<Undo2 className="h-4 w-4" />
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={redo}
+									disabled={historyIndex === history.length - 1}
+									className="gap-2 bg-transparent"
+									title="Redo (Cmd/Ctrl+Shift+Z)"
+								>
+									<Redo2 className="h-4 w-4" />
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={copyToClipboard}
+									className="gap-2 bg-transparent"
+								>
+									{copied ? (
+										<>
+											<Check className="h-4 w-4" />
+											Copied
+										</>
+									) : (
+										<>
+											<Copy className="h-4 w-4" />
+											Copy
+										</>
+									)}
+								</Button>
+							</div>
 						</div>
-					</div>
-					<input
-						ref={fileInputRef}
-						type="file"
-						accept=".csv"
-						onChange={handleFileImport}
-						style={{ display: "none" }}
-					/>
+						<Textarea
+							value={markdown}
+							onChange={(e) => setMarkdown(e.target.value)}
+							className="font-mono text-sm min-h-[500px] resize-y"
+							placeholder="Paste your markdown table here..."
+						/>
+					</Card>
+				</TabsContent>
 
-					{tableData.length > 0 ? (
-						<div className="overflow-x-auto overflow-y-auto max-h-[500px]">
-							<table className="border-collapse w-full">
-								<thead>
-									<tr>
-										<th className="w-8"></th>
-										{tableData[0].map((_, colIndex) => (
-											<th key={colIds[colIndex]} className="p-0">
-												<div className="flex gap-1 items-center justify-center py-1">
-													<div className="flex gap-0.5">
+				<TabsContent value="visual" className="mt-0">
+					<Card className="p-6">
+						<div className="flex items-center justify-between mb-4">
+							<h2 className="text-xl font-semibold">Visual Editor</h2>
+							<div className="flex gap-2">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={importCSV}
+									className="gap-2 bg-transparent"
+									title="Import CSV file"
+								>
+									<Upload className="h-4 w-4" />
+									Import CSV
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={exportCSV}
+									disabled={tableData.length === 0}
+									className="gap-2 bg-transparent"
+									title="Export to CSV file"
+								>
+									<Download className="h-4 w-4" />
+									Export CSV
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={addRow}
+									disabled={tableData.length === 0}
+									className="gap-2 bg-transparent"
+								>
+									<Plus className="h-4 w-4" />
+									Row
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={addColumn}
+									disabled={tableData.length === 0}
+									className="gap-2 bg-transparent"
+								>
+									<Plus className="h-4 w-4" />
+									Column
+								</Button>
+							</div>
+						</div>
+						<input
+							ref={fileInputRef}
+							type="file"
+							accept=".csv"
+							onChange={handleFileImport}
+							style={{ display: "none" }}
+						/>
+
+						{tableData.length > 0 ? (
+							<div className="overflow-x-auto overflow-y-auto max-h-[500px]">
+								<table className="border-collapse w-full">
+									<thead>
+										<tr>
+											<th className="w-8"></th>
+											{tableData[0].map((_, colIndex) => (
+												<th key={colIds[colIndex]} className="p-0">
+													<div className="flex gap-1 items-center justify-center py-1">
+														<div className="flex gap-0.5">
+															<Button
+																variant={
+																	alignments[colIndex] === "left" ? "default" : "ghost"
+																}
+																size="sm"
+																onClick={() => handleAlignmentChange(colIndex, "left")}
+																className="h-6 w-6 p-0"
+																title="Align left"
+															>
+																<AlignLeft className="h-3 w-3" />
+															</Button>
+															<Button
+																variant={
+																	alignments[colIndex] === "center"
+																		? "default"
+																		: "ghost"
+																}
+																size="sm"
+																onClick={() =>
+																	handleAlignmentChange(colIndex, "center")
+																}
+																className="h-6 w-6 p-0"
+																title="Align center"
+															>
+																<AlignCenter className="h-3 w-3" />
+															</Button>
+															<Button
+																variant={
+																	alignments[colIndex] === "right" ? "default" : "ghost"
+																}
+																size="sm"
+																onClick={() => handleAlignmentChange(colIndex, "right")}
+																className="h-6 w-6 p-0"
+																title="Align right"
+															>
+																<AlignRight className="h-3 w-3" />
+															</Button>
+														</div>
 														<Button
-															variant={
-																alignments[colIndex] === "left"
-																	? "default"
-																	: "ghost"
-															}
+															variant="ghost"
 															size="sm"
-															onClick={() =>
-																handleAlignmentChange(colIndex, "left")
-															}
-															className="h-6 w-6 p-0"
-															title="Align left"
+															onClick={() => deleteColumn(colIndex)}
+															className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
+															title="Delete column"
 														>
-															<AlignLeft className="h-3 w-3" />
-														</Button>
-														<Button
-															variant={
-																alignments[colIndex] === "center"
-																	? "default"
-																	: "ghost"
-															}
-															size="sm"
-															onClick={() =>
-																handleAlignmentChange(colIndex, "center")
-															}
-															className="h-6 w-6 p-0"
-															title="Align center"
-														>
-															<AlignCenter className="h-3 w-3" />
-														</Button>
-														<Button
-															variant={
-																alignments[colIndex] === "right"
-																	? "default"
-																	: "ghost"
-															}
-															size="sm"
-															onClick={() =>
-																handleAlignmentChange(colIndex, "right")
-															}
-															className="h-6 w-6 p-0"
-															title="Align right"
-														>
-															<AlignRight className="h-3 w-3" />
+															<Trash2 className="h-3 w-3" />
 														</Button>
 													</div>
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => deleteColumn(colIndex)}
-														className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
-														title="Delete column"
-													>
-														<Trash2 className="h-3 w-3" />
-													</Button>
-												</div>
-											</th>
-										))}
-									</tr>
-								</thead>
-								<tbody>
-									{tableData.map((row, rowIndex) => (
-										<tr key={rowIds[rowIndex]}>
-											<td className="p-0">
-												{rowIndex > 0 && (
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => deleteRow(rowIndex)}
-														className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
-													>
-														<Trash2 className="h-3 w-3" />
-													</Button>
-												)}
-											</td>
-											{row.map((cell, colIndex) => (
-												<td key={colIds[colIndex]} className="p-1">
-													<input
-														type="text"
-														value={cell}
-														onChange={(e) =>
-															handleCellChange(
-																rowIndex,
-																colIndex,
-																e.target.value,
-															)
-														}
-														onKeyDown={(e) =>
-															handleKeyDown(e, rowIndex, colIndex)
-														}
-														data-row={rowIndex}
-														data-col={colIndex}
-														className={`w-full min-w-[100px] max-w-[300px] px-3 py-2 border rounded-md bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring ${
-															rowIndex === 0 ? "font-semibold bg-muted" : ""
-														}`}
-													/>
-												</td>
+												</th>
 											))}
 										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-					) : (
-						<div className="flex items-center justify-center h-[500px] text-muted-foreground">
-							{"Paste a markdown table to get started"}
-						</div>
-					)}
-				</Card>
-			</div>
+									</thead>
+									<tbody>
+										{tableData.map((row, rowIndex) => (
+											<tr key={rowIds[rowIndex]}>
+												<td className="p-0">
+													{rowIndex > 0 && (
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={() => deleteRow(rowIndex)}
+															className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
+														>
+															<Trash2 className="h-3 w-3" />
+														</Button>
+													)}
+												</td>
+												{row.map((cell, colIndex) => (
+													<td key={colIds[colIndex]} className="p-1">
+														<input
+															type="text"
+															value={cell}
+															onChange={(e) =>
+																handleCellChange(rowIndex, colIndex, e.target.value)
+															}
+															onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
+															data-row={rowIndex}
+															data-col={colIndex}
+															className={`w-full min-w-[100px] max-w-[300px] px-3 py-2 border rounded-md bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring ${
+																rowIndex === 0 ? "font-semibold bg-muted" : ""
+															}`}
+														/>
+													</td>
+												))}
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+						) : (
+							<div className="flex items-center justify-center h-[500px] text-muted-foreground">
+								Paste a markdown table to get started
+							</div>
+						)}
+					</Card>
+				</TabsContent>
+
+				<TabsContent value="preview" className="mt-0">
+					<Card className="p-6">
+						<h2 className="text-xl font-semibold mb-4">Preview</h2>
+						<div
+							className="markdown-body min-h-[500px] overflow-x-auto p-4 rounded-md border"
+							// biome-ignore lint/security/noDangerouslySetInnerHtml: HTML is sanitized by remark/rehype processors
+							dangerouslySetInnerHTML={{ __html: renderedHtml }}
+						/>
+					</Card>
+				</TabsContent>
+			</Tabs>
+
 			<ToastContainer toasts={toasts} onClose={closeToast} />
 		</div>
 	);

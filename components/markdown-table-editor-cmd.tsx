@@ -30,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ToastContainer, useToast } from "@/components/ui/toast";
 import { LayoutNav } from "@/components/layout-nav";
+import { CommandPalette, CommandPaletteButton, type CommandItem } from "@/components/command-palette";
 
 const defaultMarkdown = `| Name | Age | City |
 |------|-----|------|
@@ -45,10 +46,11 @@ type MarkdownTab = "edit" | "preview";
 let nextRowId = 0;
 let nextColId = 0;
 
-export default function MarkdownTableEditor() {
+export default function MarkdownTableEditorCmd() {
 	const { theme, setTheme } = useTheme();
 	const { toasts, closeToast, success, error, info } = useToast();
 	const [mounted, setMounted] = useState(false);
+	const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 	const [markdown, setMarkdown] = useState(() => {
 		if (typeof window !== "undefined") {
 			const saved = localStorage.getItem(STORAGE_KEY);
@@ -160,9 +162,19 @@ export default function MarkdownTableEditor() {
 		renderMarkdown();
 	}, [markdown, error]);
 
-	// Keyboard shortcuts for undo/redo
+	// Keyboard shortcuts for undo/redo and command palette
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
+			// Command palette (Cmd+K)
+			if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+				e.preventDefault();
+				setIsCommandPaletteOpen(true);
+				return;
+			}
+
+			// Don't handle other shortcuts if command palette is open
+			if (isCommandPaletteOpen) return;
+
 			if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === "z") {
 				e.preventDefault();
 				undo();
@@ -178,7 +190,7 @@ export default function MarkdownTableEditor() {
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [historyIndex, history]);
+	}, [historyIndex, history, isCommandPaletteOpen]);
 
 	const updateMarkdown = (data: string[][], aligns: Alignment[]) => {
 		if (data.length === 0) return;
@@ -520,6 +532,104 @@ export default function MarkdownTableEditor() {
 		}
 	};
 
+	const resetTable = () => {
+		const confirmed = window.confirm(
+			"Are you sure you want to reset the table to default? This will clear all your data and cannot be undone."
+		);
+		if (!confirmed) return;
+
+		localStorage.removeItem(STORAGE_KEY);
+		setMarkdown(defaultMarkdown);
+		success("Table reset to default");
+	};
+
+	// Command palette commands
+	const commands: CommandItem[] = [
+		// Edit commands
+		{
+			id: "undo",
+			label: "Undo",
+			description: "Undo last change",
+			shortcut: "⌘Z",
+			category: "Edit",
+			action: undo,
+		},
+		{
+			id: "redo",
+			label: "Redo",
+			description: "Redo last undone change",
+			shortcut: "⌘⇧Z",
+			category: "Edit",
+			action: redo,
+		},
+		{
+			id: "copy",
+			label: "Copy Markdown",
+			description: "Copy markdown to clipboard",
+			category: "Edit",
+			action: copyToClipboard,
+		},
+		// Table commands
+		{
+			id: "add-row",
+			label: "Add Row",
+			description: "Add a new row at the end of the table",
+			category: "Table",
+			action: addRow,
+		},
+		{
+			id: "add-column",
+			label: "Add Column",
+			description: "Add a new column at the end of the table",
+			category: "Table",
+			action: addColumn,
+		},
+		{
+			id: "reset-table",
+			label: "Reset Table",
+			description: "Clear all data and reset to default table",
+			category: "Table",
+			action: resetTable,
+		},
+		// Import/Export
+		{
+			id: "import-csv",
+			label: "Import CSV",
+			description: "Import table from CSV file",
+			category: "Import/Export",
+			action: importCSV,
+		},
+		{
+			id: "export-csv",
+			label: "Export CSV",
+			description: "Export table to CSV file",
+			category: "Import/Export",
+			action: exportCSV,
+		},
+		// Theme
+		{
+			id: "theme-light",
+			label: "Light Theme",
+			description: "Switch to light theme",
+			category: "Appearance",
+			action: () => setTheme("light"),
+		},
+		{
+			id: "theme-dark",
+			label: "Dark Theme",
+			description: "Switch to dark theme",
+			category: "Appearance",
+			action: () => setTheme("dark"),
+		},
+		{
+			id: "theme-system",
+			label: "System Theme",
+			description: "Use system theme preference",
+			category: "Appearance",
+			action: () => setTheme("system"),
+		},
+	];
+
 	return (
 		<div className="container mx-auto p-6 max-w-7xl overflow-hidden">
 			<div className="mb-8">
@@ -529,41 +639,11 @@ export default function MarkdownTableEditor() {
 							Markdown Table Editor
 						</h1>
 						<p className="text-muted-foreground text-lg">
-							{
-								"Paste your markdown table, edit it visually, and see changes in real-time"
-							}
+							Command Palette Mode - Press <kbd className="px-2 py-1 text-sm bg-muted border border-border rounded">⌘K</kbd> for all actions
 						</p>
 					</div>
 					{mounted && (
-						<div className="flex gap-1 border border-border rounded-md p-1">
-							<Button
-								variant={theme === "light" ? "default" : "ghost"}
-								size="sm"
-								onClick={() => setTheme("light")}
-								className="gap-2"
-								title="Light mode"
-							>
-								<Sun className="h-4 w-4" />
-							</Button>
-							<Button
-								variant={theme === "system" ? "default" : "ghost"}
-								size="sm"
-								onClick={() => setTheme("system")}
-								className="gap-2"
-								title="System theme"
-							>
-								<Monitor className="h-4 w-4" />
-							</Button>
-							<Button
-								variant={theme === "dark" ? "default" : "ghost"}
-								size="sm"
-								onClick={() => setTheme("dark")}
-								className="gap-2"
-								title="Dark mode"
-							>
-								<Moon className="h-4 w-4" />
-							</Button>
-						</div>
+						<CommandPaletteButton onClick={() => setIsCommandPaletteOpen(true)} />
 					)}
 				</div>
 				<LayoutNav />
@@ -820,6 +900,11 @@ export default function MarkdownTableEditor() {
 				</Card>
 			</div>
 			<ToastContainer toasts={toasts} onClose={closeToast} />
+			<CommandPalette
+				isOpen={isCommandPaletteOpen}
+				onClose={() => setIsCommandPaletteOpen(false)}
+				commands={commands}
+			/>
 		</div>
 	);
 }
