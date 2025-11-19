@@ -10,6 +10,7 @@ export function LayoutNav() {
 		{ href: "/", label: "Side-by-Side" },
 		{ href: "/layout-2", label: "Tabbed" },
 		{ href: "/layout-3", label: "Vertical" },
+		{ href: "/command-palette", label: "Command Palette" },
 	];
 
 	return (
