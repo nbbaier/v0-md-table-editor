@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { ToastContainer, useToast } from "@/components/ui/toast";
 
 const defaultMarkdown = `| Name | Age | City |
 |------|-----|------|
@@ -45,6 +46,7 @@ let nextColId = 0;
 
 export default function MarkdownTableEditor() {
 	const { theme, setTheme } = useTheme();
+	const { toasts, closeToast, success, error, info } = useToast();
 	const [mounted, setMounted] = useState(false);
 	const [markdown, setMarkdown] = useState(() => {
 		if (typeof window !== "undefined") {
@@ -147,14 +149,15 @@ export default function MarkdownTableEditor() {
 					.process(markdown);
 
 				setRenderedHtml(String(file));
-			} catch (error) {
-				console.error("Error rendering markdown:", error);
+			} catch (err) {
+				console.error("Error rendering markdown:", err);
 				setRenderedHtml("<p>Error rendering markdown</p>");
+				error("Failed to render markdown preview");
 			}
 		};
 
 		renderMarkdown();
-	}, [markdown]);
+	}, [markdown, error]);
 
 	// Keyboard shortcuts for undo/redo
 	useEffect(() => {
@@ -311,6 +314,7 @@ export default function MarkdownTableEditor() {
 		setTableData(newData);
 		setRowIds([...rowIds, `row-${nextRowId++}`]);
 		updateMarkdown(newData, alignments);
+		success("Row added successfully");
 	};
 
 	const addColumn = () => {
@@ -321,13 +325,14 @@ export default function MarkdownTableEditor() {
 		setAlignments(newAlignments);
 		setColIds([...colIds, `col-${nextColId++}`]);
 		updateMarkdown(newData, newAlignments);
+		success("Column added successfully");
 	};
 
 	const deleteRow = (rowIndex: number) => {
 		if (rowIndex === 0) return;
 
 		const confirmed = window.confirm(
-			"Are you sure you want to delete this row? This action cannot be undone."
+			"Are you sure you want to delete this row?"
 		);
 		if (!confirmed) return;
 
@@ -336,11 +341,12 @@ export default function MarkdownTableEditor() {
 		setTableData(newData);
 		setRowIds(newRowIds);
 		updateMarkdown(newData, alignments);
+		success("Row deleted successfully");
 	};
 
 	const deleteColumn = (colIndex: number) => {
 		const confirmed = window.confirm(
-			"Are you sure you want to delete this column? This action cannot be undone."
+			"Are you sure you want to delete this column?"
 		);
 		if (!confirmed) return;
 
@@ -353,6 +359,7 @@ export default function MarkdownTableEditor() {
 		setAlignments(newAlignments);
 		setColIds(newColIds);
 		updateMarkdown(newData, newAlignments);
+		success("Column deleted successfully");
 	};
 
 	const undo = () => {
@@ -360,6 +367,7 @@ export default function MarkdownTableEditor() {
 			setIsUndoRedo(true);
 			setHistoryIndex(historyIndex - 1);
 			setMarkdown(history[historyIndex - 1]);
+			info("Undone");
 		}
 	};
 
@@ -368,6 +376,7 @@ export default function MarkdownTableEditor() {
 			setIsUndoRedo(true);
 			setHistoryIndex(historyIndex + 1);
 			setMarkdown(history[historyIndex + 1]);
+			info("Redone");
 		}
 	};
 
@@ -376,9 +385,10 @@ export default function MarkdownTableEditor() {
 			await navigator.clipboard.writeText(markdown);
 			setCopied(true);
 			setTimeout(() => setCopied(false), 2000);
-		} catch (error) {
-			console.error("Failed to copy to clipboard:", error);
-			// Fallback: show error state or use alternative copy method
+			success("Markdown copied to clipboard!");
+		} catch (err) {
+			console.error("Failed to copy to clipboard:", err);
+			error("Failed to copy to clipboard. Please try again.");
 		}
 	};
 
@@ -434,7 +444,7 @@ export default function MarkdownTableEditor() {
 			try {
 				const parsedData = parseCSV(csvText);
 				if (parsedData.length === 0) {
-					alert("The CSV file appears to be empty.");
+					error("The CSV file appears to be empty.");
 					return;
 				}
 
@@ -451,10 +461,15 @@ export default function MarkdownTableEditor() {
 						: `| ${headerLine} |\n| ${separator} |`;
 
 				setMarkdown(newMarkdown);
-			} catch (error) {
-				console.error("Error parsing CSV:", error);
-				alert("Failed to parse CSV file. Please check the file format.");
+				success(`Imported CSV with ${parsedData.length} rows and ${headers.length} columns`);
+			} catch (err) {
+				console.error("Error parsing CSV:", err);
+				error("Failed to parse CSV file. Please check the file format.");
 			}
+		};
+
+		reader.onerror = () => {
+			error("Failed to read the file. Please try again.");
 		};
 
 		reader.readAsText(file);
@@ -464,37 +479,44 @@ export default function MarkdownTableEditor() {
 
 	const exportCSV = () => {
 		if (tableData.length === 0) {
-			alert("No table data to export.");
+			error("No table data to export.");
 			return;
 		}
 
-		// Convert table data to CSV
-		const csvRows = tableData.map((row) => {
-			return row
-				.map((cell) => {
-					// Escape quotes and wrap in quotes if contains comma or quote
-					if (cell.includes(",") || cell.includes('"') || cell.includes("\n")) {
-						return `"${cell.replace(/"/g, '""')}"`;
-					}
-					return cell;
-				})
-				.join(",");
-		});
+		try {
+			// Convert table data to CSV
+			const csvRows = tableData.map((row) => {
+				return row
+					.map((cell) => {
+						// Escape quotes and wrap in quotes if contains comma or quote
+						if (cell.includes(",") || cell.includes('"') || cell.includes("\n")) {
+							return `"${cell.replace(/"/g, '""')}"`;
+						}
+						return cell;
+					})
+					.join(",");
+			});
 
-		const csvContent = csvRows.join("\n");
+			const csvContent = csvRows.join("\n");
 
-		// Create download link
-		const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-		const link = document.createElement("a");
-		const url = URL.createObjectURL(blob);
+			// Create download link
+			const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+			const link = document.createElement("a");
+			const url = URL.createObjectURL(blob);
 
-		link.setAttribute("href", url);
-		link.setAttribute("download", "table.csv");
-		link.style.visibility = "hidden";
-		document.body.appendChild(link);
-		link.click();
-		document.body.removeChild(link);
-		URL.revokeObjectURL(url);
+			link.setAttribute("href", url);
+			link.setAttribute("download", "table.csv");
+			link.style.visibility = "hidden";
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			URL.revokeObjectURL(url);
+
+			success("CSV file downloaded successfully!");
+		} catch (err) {
+			console.error("Error exporting CSV:", err);
+			error("Failed to export CSV. Please try again.");
+		}
 	};
 
 	return (
@@ -795,6 +817,7 @@ export default function MarkdownTableEditor() {
 					)}
 				</Card>
 			</div>
+			<ToastContainer toasts={toasts} onClose={closeToast} />
 		</div>
 	);
 }
