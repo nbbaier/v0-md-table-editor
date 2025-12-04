@@ -1,7 +1,5 @@
-"use client";
-
+import { AlertCircle, Check, Info, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Check, X, AlertCircle, Info } from "lucide-react";
 
 export type ToastType = "success" | "error" | "info";
 
@@ -44,8 +42,9 @@ function ToastItem({ toast, onClose }: ToastProps) {
 			<div className="flex-shrink-0">{icons[toast.type]}</div>
 			<p className="flex-1 text-sm font-medium">{toast.message}</p>
 			<button
+				type="button"
 				onClick={() => onClose(toast.id)}
-				className="flex-shrink-0 hover:opacity-70 transition-opacity"
+				className="shrink-0 transition-opacity hover:opacity-70"
 				aria-label="Close notification"
 			>
 				<X className="h-4 w-4" />

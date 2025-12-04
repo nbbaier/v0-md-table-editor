@@ -1,0 +1,10 @@
+---
+import MarkdownTableEditor from "../components/markdown-table-editor";
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout>
+   <main class="min-h-screen bg-background">
+      <MarkdownTableEditor client:only="react" />
+   </main>
+</Layout>

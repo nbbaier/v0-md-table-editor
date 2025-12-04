@@ -1,0 +1,28 @@
+---
+import "../styles/globals.css";
+
+export interface Props {
+   title?: string;
+   description?: string;
+}
+
+const {
+   title = "Markdown Table Editor",
+   description = "A visual editor for markdown tables with real-time preview and formatting support",
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+   <head>
+      <meta charSet="UTF-8" />
+      <meta name="description" content={description} />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+      <meta name="generator" content="v0.app" />
+      <title>{title}</title>
+   </head>
+   <body class="font-sans antialiased">
+      <slot />
+   </body>
+</html>
