@@ -5,7 +5,15 @@ export default function App() {
 	return (
 		<main className="min-h-screen bg-background">
 			<MarkdownTableEditor />
-			<Toaster />
+			<Toaster
+				toastOptions={{
+					style: {
+						borderRadius: "0rem",
+					},
+				}}
+				richColors
+				position="top-right"
+			/>
 		</main>
 	);
 }

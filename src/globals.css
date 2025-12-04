@@ -1,159 +1,170 @@
 @import "tailwindcss";
-@import "tw-animate-css";
 
-:root {
-   --background: oklch(0.97 0.005 90);
-   --foreground: oklch(0.15 0 0);
-   --card: oklch(0.97 0.005 90);
-   --card-foreground: oklch(0.15 0 0);
-   --popover: oklch(0.98 0.003 90);
-   --popover-foreground: oklch(0.15 0 0);
-   --primary: oklch(0.15 0 0);
-   --primary-foreground: oklch(0.97 0.005 90);
-   --secondary: oklch(0.94 0.005 90);
-   --secondary-foreground: oklch(0.15 0 0);
-   --muted: oklch(0.92 0.005 90);
-   --muted-foreground: oklch(0.45 0 0);
-   --accent: oklch(0.92 0.005 90);
-   --accent-foreground: oklch(0.15 0 0);
-   --destructive: oklch(0.5 0.2 25);
-   --destructive-foreground: oklch(0.98 0 0);
-   --border: oklch(0.85 0.005 90);
-   --input: oklch(0.98 0.003 90);
-   --ring: oklch(0.15 0 0);
-   --chart-1: oklch(0.15 0 0);
-   --chart-2: oklch(0.4 0 0);
-   --chart-3: oklch(0.6 0 0);
-   --chart-4: oklch(0.75 0 0);
-   --chart-5: oklch(0.85 0 0);
-   --radius: 0;
-   --sidebar: oklch(0.97 0.005 90);
-   --sidebar-foreground: oklch(0.15 0 0);
-   --sidebar-primary: oklch(0.15 0 0);
-   --sidebar-primary-foreground: oklch(0.97 0.005 90);
-   --sidebar-accent: oklch(0.92 0.005 90);
-   --sidebar-accent-foreground: oklch(0.15 0 0);
-   --sidebar-border: oklch(0.85 0.005 90);
-   --sidebar-ring: oklch(0.15 0 0);
+@theme {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+
+	--font-sans: "Geist", "Geist Fallback", system-ui, sans-serif;
+	--font-serif: Georgia, serif;
+	--font-mono: "Geist Mono", "Geist Mono Fallback", monospace;
 }
 
-@theme inline {
-   --font-sans: "Geist", "Geist Fallback", system-ui, sans-serif;
-   --font-serif: "Times New Roman", "Georgia", serif;
-   --font-mono: "Geist Mono", "Geist Mono Fallback", monospace;
-   --color-background: var(--background);
-   --color-foreground: var(--foreground);
-   --color-card: var(--card);
-   --color-card-foreground: var(--card-foreground);
-   --color-popover: var(--popover);
-   --color-popover-foreground: var(--popover-foreground);
-   --color-primary: var(--primary);
-   --color-primary-foreground: var(--primary-foreground);
-   --color-secondary: var(--secondary);
-   --color-secondary-foreground: var(--secondary-foreground);
-   --color-muted: var(--muted);
-   --color-muted-foreground: var(--muted-foreground);
-   --color-accent: var(--accent);
-   --color-accent-foreground: var(--accent-foreground);
-   --color-destructive: var(--destructive);
-   --color-destructive-foreground: var(--destructive-foreground);
-   --color-border: var(--border);
-   --color-input: var(--input);
-   --color-ring: var(--ring);
-   --color-chart-1: var(--chart-1);
-   --color-chart-2: var(--chart-2);
-   --color-chart-3: var(--chart-3);
-   --color-chart-4: var(--chart-4);
-   --color-chart-5: var(--chart-5);
-   --radius-sm: calc(var(--radius) - 4px);
-   --radius-md: calc(var(--radius) - 2px);
-   --radius-lg: var(--radius);
-   --radius-xl: calc(var(--radius) + 4px);
-   --color-sidebar: var(--sidebar);
-   --color-sidebar-foreground: var(--sidebar-foreground);
-   --color-sidebar-primary: var(--sidebar-primary);
-   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-   --color-sidebar-accent: var(--sidebar-accent);
-   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-   --color-sidebar-border: var(--sidebar-border);
-   --color-sidebar-ring: var(--sidebar-ring);
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentcolor);
+	}
+}
+
+@layer utilities {
+	:root {
+		--background: oklch(0.97 0.005 90);
+		--foreground: oklch(0.15 0 0);
+		--card: oklch(0.97 0.005 90);
+		--card-foreground: oklch(0.15 0 0);
+		--popover: oklch(0.98 0.003 90);
+		--popover-foreground: oklch(0.15 0 0);
+		--primary: oklch(0.15 0 0);
+		--primary-foreground: oklch(0.97 0.005 90);
+		--secondary: oklch(0.94 0.005 90);
+		--secondary-foreground: oklch(0.15 0 0);
+		--muted: oklch(0.92 0.005 90);
+		--muted-foreground: oklch(0.45 0 0);
+		--accent: oklch(0.92 0.005 90);
+		--accent-foreground: oklch(0.15 0 0);
+		--destructive: oklch(0.5 0.2 25);
+		--destructive-foreground: oklch(0.98 0 0);
+		--border: oklch(0.85 0.005 90);
+		--input: oklch(0.98 0.003 90);
+		--ring: oklch(0.15 0 0);
+		--chart-1: oklch(0.15 0 0);
+		--chart-2: oklch(0.4 0 0);
+		--chart-3: oklch(0.6 0 0);
+		--chart-4: oklch(0.75 0 0);
+		--chart-5: oklch(0.85 0 0);
+		--radius: 0;
+		--sidebar: oklch(0.97 0.005 90);
+		--sidebar-foreground: oklch(0.15 0 0);
+		--sidebar-primary: oklch(0.15 0 0);
+		--sidebar-primary-foreground: oklch(0.97 0.005 90);
+		--sidebar-accent: oklch(0.92 0.005 90);
+		--sidebar-accent-foreground: oklch(0.15 0 0);
+		--sidebar-border: oklch(0.85 0.005 90);
+		--sidebar-ring: oklch(0.15 0 0);
+	}
 }
 
 @layer base {
-   * {
-      @apply border-border outline-ring/50;
-   }
-   body {
-      @apply bg-background text-foreground;
-   }
+	* {
+		@apply border-border;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
 }
 
 /* Markdown table formatting */
 .markdown-body table {
-   border-spacing: 0;
-   border-collapse: collapse;
-   display: block;
-   width: max-content;
-   max-width: 100%;
-   overflow: auto;
-   font-variant: tabular-nums;
+	border-spacing: 0;
+	border-collapse: collapse;
+	display: block;
+	width: max-content;
+	max-width: 100%;
+	overflow: auto;
+	font-variant: tabular-nums;
 }
 
 .markdown-body td,
 .markdown-body th {
-   padding: 0;
+	padding: 0;
 }
 
 .markdown-body table th {
-   font-weight: 600;
+	font-weight: 600;
 }
 
 .markdown-body table th,
 .markdown-body table td {
-   padding: 6px 13px;
-   border: 1px solid #d1d9e0;
+	padding: 6px 13px;
+	border: 1px solid #d1d9e0;
 }
 
 .markdown-body table tr {
-   background-color: #ffffff;
-   border-top: 1px solid #d1d9e0b3;
+	background-color: #ffffff;
+	border-top: 1px solid #d1d9e0b3;
 }
 
 .markdown-body table tr:nth-child(2n) {
-   background-color: #f6f8fa;
+	background-color: #f6f8fa;
 }
 
 .markdown-body table img {
-   background-color: transparent;
+	background-color: transparent;
 }
 
 .markdown-body table td > :last-child {
-   margin-bottom: 0;
+	margin-bottom: 0;
 }
 
 .markdown-body .csv-data td,
 .markdown-body .csv-data th {
-   padding: 5px;
-   overflow: hidden;
-   font-size: 12px;
-   line-height: 1;
-   text-align: left;
-   white-space: nowrap;
+	padding: 5px;
+	overflow: hidden;
+	font-size: 12px;
+	line-height: 1;
+	text-align: left;
+	white-space: nowrap;
 }
 
 .markdown-body .csv-data .blob-num {
-   padding: 10px 0.5rem 9px;
-   text-align: right;
-   background: #ffffff;
-   border: 0;
+	padding: 10px 0.5rem 9px;
+	text-align: right;
+	background: #ffffff;
+	border: 0;
 }
 
 .markdown-body .csv-data tr {
-   border-top: 0;
+	border-top: 0;
 }
 
 .markdown-body .csv-data th {
-   font-weight: 600;
-   background: #f6f8fa;
-   border-top: 0;
+	font-weight: 600;
+	background: #f6f8fa;
+	border-top: 0;
 }
