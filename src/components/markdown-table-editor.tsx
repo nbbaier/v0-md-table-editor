@@ -1,7 +1,7 @@
 import { AlignCenter, AlignLeft, AlignRight, Trash2 } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ToastContainer, useToast } from "@/components/ui/toast";
+import { toast } from "sonner";
 
 const defaultMarkdown = `| Name | Age | City |
 |------|-----|------|
@@ -17,7 +17,6 @@ let nextRowId = 0;
 let nextColId = 0;
 
 export default function MarkdownTableEditor() {
-	const { toasts, closeToast, success, error, info } = useToast();
 	const [markdown, setMarkdown] = useState(() => {
 		if (typeof window !== "undefined") {
 			const saved = localStorage.getItem(STORAGE_KEY);
@@ -108,18 +107,18 @@ export default function MarkdownTableEditor() {
 			setIsUndoRedo(true);
 			setHistoryIndex(historyIndex - 1);
 			setMarkdown(history[historyIndex - 1]);
-			info("Undone");
+			toast.info("Undone");
 		}
-	}, [historyIndex, history, info]);
+	}, [historyIndex, history]);
 
 	const redo = useCallback(() => {
 		if (historyIndex < history.length - 1) {
 			setIsUndoRedo(true);
 			setHistoryIndex(historyIndex + 1);
 			setMarkdown(history[historyIndex + 1]);
-			info("Redone");
+			toast.info("Redone");
 		}
-	}, [historyIndex, history, info]);
+	}, [historyIndex, history]);
 
 	// Keyboard shortcuts for undo/redo and escape to cancel
 	useEffect(() => {
@@ -277,7 +276,7 @@ export default function MarkdownTableEditor() {
 		setTableData(newData);
 		setRowIds([...rowIds, `row-${nextRowId++}`]);
 		updateMarkdown(newData, alignments);
-		success("Row added");
+		toast.success("Row added");
 	};
 
 	const addColumn = () => {
@@ -288,7 +287,7 @@ export default function MarkdownTableEditor() {
 		setAlignments(newAlignments);
 		setColIds([...colIds, `col-${nextColId++}`]);
 		updateMarkdown(newData, newAlignments);
-		success("Column added");
+		toast.success("Column added");
 	};
 
 	const confirmDeleteRow = (rowIndex: number) => {
@@ -298,7 +297,7 @@ export default function MarkdownTableEditor() {
 		setRowIds(newRowIds);
 		updateMarkdown(newData, alignments);
 		setPendingDeleteRow(null);
-		success("Row deleted");
+		toast.success("Row deleted");
 	};
 
 	const confirmDeleteColumn = (colIndex: number) => {
@@ -312,7 +311,7 @@ export default function MarkdownTableEditor() {
 		setColIds(newColIds);
 		updateMarkdown(newData, newAlignments);
 		setPendingDeleteCol(null);
-		success("Column deleted");
+		toast.success("Column deleted");
 	};
 
 	const copyToClipboard = async () => {
@@ -320,16 +319,16 @@ export default function MarkdownTableEditor() {
 			await navigator.clipboard.writeText(markdown);
 			setCopied(true);
 			setTimeout(() => setCopied(false), 2000);
-			success("Copied to clipboard");
+			toast.success("Copied to clipboard");
 		} catch (err) {
 			console.error("Failed to copy to clipboard:", err);
-			error("Failed to copy");
+			toast.error("Failed to copy");
 		}
 	};
 
 	const loadExample = () => {
 		setMarkdown(defaultMarkdown);
-		success("Example loaded");
+		toast.success("Example loaded");
 	};
 
 	const parseCSV = (csvText: string): string[][] => {
@@ -380,7 +379,7 @@ export default function MarkdownTableEditor() {
 			try {
 				const parsedData = parseCSV(csvText);
 				if (parsedData.length === 0) {
-					error("The CSV file appears to be empty.");
+					toast.error("The CSV file appears to be empty.");
 					return;
 				}
 
@@ -396,15 +395,15 @@ export default function MarkdownTableEditor() {
 						: `| ${headerLine} |\n| ${separator} |`;
 
 				setMarkdown(newMarkdown);
-				success(`Imported ${parsedData.length} rows`);
+				toast.success(`Imported ${parsedData.length} rows`);
 			} catch (err) {
 				console.error("Error parsing CSV:", err);
-				error("Failed to parse CSV file.");
+				toast.error("Failed to parse CSV file.");
 			}
 		};
 
 		reader.onerror = () => {
-			error("Failed to read the file.");
+			toast.error("Failed to read the file.");
 		};
 
 		reader.readAsText(file);
@@ -413,7 +412,7 @@ export default function MarkdownTableEditor() {
 
 	const exportCSV = () => {
 		if (tableData.length === 0) {
-			error("No table data to export.");
+			toast.error("No table data to export.");
 			return;
 		}
 
@@ -446,10 +445,10 @@ export default function MarkdownTableEditor() {
 			document.body.removeChild(link);
 			URL.revokeObjectURL(url);
 
-			success("CSV downloaded");
+			toast.success("CSV downloaded");
 		} catch (err) {
 			console.error("Error exporting CSV:", err);
-			error("Failed to export CSV.");
+			toast.error("Failed to export CSV.");
 		}
 	};
 
@@ -714,7 +713,6 @@ export default function MarkdownTableEditor() {
 					)}
 				</section>
 			</div>
-			<ToastContainer toasts={toasts} onClose={closeToast} />
 		</div>
 	);
 }
