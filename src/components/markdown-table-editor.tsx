@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-<<<<<<<< HEAD:src/components/markdown-table-editor.tsx
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import {
@@ -22,11 +21,6 @@ import {
 	DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Textarea } from "./ui/textarea";
-|||||||| 1c6b13f:components/markdown-table-editor.tsx
-import { ToastContainer, useToast } from "@/components/ui/toast";
-========
-import { Toaster, toast } from "sonner";
->>>>>>>> main:components/markdown-table-editor.tsx
 
 const defaultMarkdown = `| Name | Age | City |
 |------|-----|------|
@@ -513,19 +507,10 @@ export default function MarkdownTableEditor() {
 						</h1>
 					</div>
 					<p className="mt-4 text-muted-foreground leading-relaxed">
-<<<<<<<< HEAD:src/components/markdown-table-editor.tsx
 						Paste markdown tables to edit them visually. Supports formatting,
 						alignment, row/column management, CSV import/export, keyboard
 						shortcuts, and undo/redo. Use arrow keys to navigate between cells
 						in the table editor.
-|||||||| 1c6b13f:components/markdown-table-editor.tsx
-						A minimal tool for editing markdown tables. Paste or type markdown below, 
-						edit visually in the table. Use ⌘Z to undo, ⌘⇧Z to redo, arrow keys to navigate.
-========
-						A minimal tool for editing markdown tables. Paste or type markdown
-						below, edit visually in the table. Use ⌘Z to undo, ⌘⇧Z to redo,
-						arrow keys to navigate.
->>>>>>>> main:components/markdown-table-editor.tsx
 					</p>
 				</header>
 				{/* Source */}
@@ -564,16 +549,8 @@ export default function MarkdownTableEditor() {
 							</Button>
 						</div>
 					</div>
-<<<<<<<< HEAD:src/components/markdown-table-editor.tsx
 
 					<Textarea
-|||||||| 1c6b13f:components/markdown-table-editor.tsx
-					
-					<textarea
-========
-
-					<textarea
->>>>>>>> main:components/markdown-table-editor.tsx
 						value={markdown}
 						onChange={(e) => setMarkdown(e.target.value)}
 						className="w-full min-h-[200px] p-4 font-mono text-sm bg-transparent border border-border focus:border-foreground focus:outline-hidden resize-y rounded-none focus-visible:ring-0 "
@@ -639,7 +616,6 @@ export default function MarkdownTableEditor() {
 									<tr className="border-b border-border group/header">
 										<th className="w-8 p-2 border-r border-border" />
 										{tableData[0].map((_, colIndex) => (
-<<<<<<<< HEAD:src/components/markdown-table-editor.tsx
 											<th
 												key={colIds[colIndex]}
 												className={`p-2 text-left text-muted-foreground ${
@@ -648,14 +624,6 @@ export default function MarkdownTableEditor() {
 														: ""
 												}`}
 											>
-|||||||| 1c6b13f:components/markdown-table-editor.tsx
-											<th key={colIds[colIndex]} className="p-2 text-left text-muted-foreground">
-========
-											<th
-												key={colIds[colIndex]}
-												className="p-2 text-left text-muted-foreground"
-											>
->>>>>>>> main:components/markdown-table-editor.tsx
 												{pendingDeleteCol === colIndex ? (
 													<div className="flex items-center gap-2 text-xs">
 														<span>Delete?</span>
@@ -673,7 +641,6 @@ export default function MarkdownTableEditor() {
 														</button>
 													</div>
 												) : (
-<<<<<<<< HEAD:src/components/markdown-table-editor.tsx
 													<DropdownMenu>
 														<DropdownMenuTrigger asChild>
 															<button
@@ -716,75 +683,6 @@ export default function MarkdownTableEditor() {
 															</DropdownMenuItem>
 														</DropdownMenuContent>
 													</DropdownMenu>
-|||||||| 1c6b13f:components/markdown-table-editor.tsx
-													<div className="flex items-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity">
-														<button
-															onClick={() => handleAlignmentChange(colIndex, "left")}
-															className={`p-1 hover:text-foreground ${alignments[colIndex] === "left" ? "text-foreground" : ""}`}
-															title="Align left"
-														>
-															<AlignLeft className="w-3.5 h-3.5" />
-														</button>
-														<button
-															onClick={() => handleAlignmentChange(colIndex, "center")}
-															className={`p-1 hover:text-foreground ${alignments[colIndex] === "center" ? "text-foreground" : ""}`}
-															title="Align center"
-														>
-															<AlignCenter className="w-3.5 h-3.5" />
-														</button>
-														<button
-															onClick={() => handleAlignmentChange(colIndex, "right")}
-															className={`p-1 hover:text-foreground ${alignments[colIndex] === "right" ? "text-foreground" : ""}`}
-															title="Align right"
-														>
-															<AlignRight className="w-3.5 h-3.5" />
-														</button>
-														<button
-															onClick={() => setPendingDeleteCol(colIndex)}
-															className="p-1 hover:text-destructive ml-1"
-															title="Delete column"
-														>
-															<Trash2 className="w-3.5 h-3.5" />
-														</button>
-													</div>
-========
-													<div className="flex items-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity">
-														<button
-															onClick={() =>
-																handleAlignmentChange(colIndex, "left")
-															}
-															className={`p-1 hover:text-foreground ${alignments[colIndex] === "left" ? "text-foreground" : ""}`}
-															title="Align left"
-														>
-															<AlignLeft className="w-3.5 h-3.5" />
-														</button>
-														<button
-															onClick={() =>
-																handleAlignmentChange(colIndex, "center")
-															}
-															className={`p-1 hover:text-foreground ${alignments[colIndex] === "center" ? "text-foreground" : ""}`}
-															title="Align center"
-														>
-															<AlignCenter className="w-3.5 h-3.5" />
-														</button>
-														<button
-															onClick={() =>
-																handleAlignmentChange(colIndex, "right")
-															}
-															className={`p-1 hover:text-foreground ${alignments[colIndex] === "right" ? "text-foreground" : ""}`}
-															title="Align right"
-														>
-															<AlignRight className="w-3.5 h-3.5" />
-														</button>
-														<button
-															onClick={() => setPendingDeleteCol(colIndex)}
-															className="p-1 hover:text-destructive ml-1"
-															title="Delete column"
-														>
-															<Trash2 className="w-3.5 h-3.5" />
-														</button>
-													</div>
->>>>>>>> main:components/markdown-table-editor.tsx
 												)}
 											</th>
 										))}
@@ -798,19 +696,9 @@ export default function MarkdownTableEditor() {
 												rowIndex === 0 ? "bg-muted/30" : ""
 											}`}
 										>
-<<<<<<<< HEAD:src/components/markdown-table-editor.tsx
 											<td className="p-2 w-8 text-center border-r border-border">
 												{rowIndex > 0 &&
 													(pendingDeleteRow === rowIndex ? (
-|||||||| 1c6b13f:components/markdown-table-editor.tsx
-											<td className="p-2 w-8 text-center">
-												{rowIndex > 0 && (
-													pendingDeleteRow === rowIndex ? (
-========
-											<td className="p-2 w-8 text-center">
-												{rowIndex > 0 &&
-													(pendingDeleteRow === rowIndex ? (
->>>>>>>> main:components/markdown-table-editor.tsx
 														<div className="flex flex-col gap-1 text-xs">
 															<button
 																onClick={() => confirmDeleteRow(rowIndex)}
@@ -859,20 +747,10 @@ export default function MarkdownTableEditor() {
 														}
 														data-row={rowIndex}
 														data-col={colIndex}
-<<<<<<<< HEAD:src/components/markdown-table-editor.tsx
 														style={{
 															textAlign: alignments[colIndex] || "left",
 														}}
 														className={`w-full px-3 py-2 bg-transparent border-0 focus:outline-hidden focus:bg-muted/50 ${
-|||||||| 1c6b13f:components/markdown-table-editor.tsx
-														style={{ textAlign: alignments[colIndex] || "left" }}
-														className={`w-full px-3 py-2 bg-transparent border-0 focus:outline-none focus:bg-muted/50 ${
-========
-														style={{
-															textAlign: alignments[colIndex] || "left",
-														}}
-														className={`w-full px-3 py-2 bg-transparent border-0 focus:outline-none focus:bg-muted/50 ${
->>>>>>>> main:components/markdown-table-editor.tsx
 															rowIndex === 0 ? "font-medium" : ""
 														}`}
 													/>
@@ -898,12 +776,6 @@ export default function MarkdownTableEditor() {
 					)}
 				</section>
 			</div>
-<<<<<<<< HEAD:src/components/markdown-table-editor.tsx
-|||||||| 1c6b13f:components/markdown-table-editor.tsx
-			<ToastContainer toasts={toasts} onClose={closeToast} />
-========
-			<Toaster />
->>>>>>>> main:components/markdown-table-editor.tsx
 		</div>
 	);
 }
