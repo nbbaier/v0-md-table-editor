@@ -26,23 +26,23 @@ npm run lint             # Run ESLint
 
 This is a minimal Next.js app with all core functionality contained in a single main component:
 
-- **`app/page.tsx`**: Entry point that renders the main `MarkdownTableEditor` component
-- **`components/markdown-table-editor.tsx`**: The heart of the application (~550 lines)
-  - Handles markdown parsing and table state management
-  - Provides visual table editing with row/column manipulation
-  - Implements real-time bidirectional sync between markdown and visual editor
-  - Includes theme switching UI
-  - Uses `unified`, `remark-gfm`, and `rehype-stringify` for markdown processing
+-  **`app/page.tsx`**: Entry point that renders the main `MarkdownTableEditor` component
+-  **`components/markdown-table-editor.tsx`**: The heart of the application (~550 lines)
+   -  Handles markdown parsing and table state management
+   -  Provides visual table editing with row/column manipulation
+   -  Implements real-time bidirectional sync between markdown and visual editor
+   -  Includes theme switching UI
+   -  Uses `unified`, `remark-gfm`, and `rehype-stringify` for markdown processing
 
 ### State Management
 
 The main component uses React state extensively with no external state management library:
 
-- `markdown`: Raw markdown string source
-- `tableData`: 2D array of cell values parsed from markdown
-- `alignments`: Column alignment settings (left/center/right)
-- `rowIds` & `colIds`: Stable identifiers for React keys during row/column operations
-- `renderedHtml`: Processed HTML for preview tab
+-  `markdown`: Raw markdown string source
+-  `tableData`: 2D array of cell values parsed from markdown
+-  `alignments`: Column alignment settings (left/center/right)
+-  `rowIds` & `colIds`: Stable identifiers for React keys during row/column operations
+-  `renderedHtml`: Processed HTML for preview tab
 
 Critical implementation detail: The app maintains two-way synchronization between markdown text and visual table representation through the `updateMarkdown()` function (line 120).
 
@@ -57,33 +57,38 @@ Critical implementation detail: The app maintains two-way synchronization betwee
 ### UI Component Structure
 
 Built on shadcn/ui components (Radix UI + Tailwind CSS):
-- **Theme System**: Uses `next-themes` for light/dark/system theme switching with `ThemeProvider` wrapper
-- **Styling**: Tailwind CSS 4.x with custom configuration
-- **UI Components**: Located in `components/ui/` - button, card, tabs, textarea (shadcn/ui patterns)
-- **Utility**: `lib/utils.ts` contains the standard `cn()` helper for merging Tailwind classes
+
+-  **Theme System**: Uses `next-themes` for light/dark/system theme switching with `ThemeProvider` wrapper
+-  **Styling**: Tailwind CSS 4.x with custom configuration
+-  **UI Components**: Located in `components/ui/` - button, card, tabs, textarea (shadcn/ui patterns)
+-  **Utility**: `lib/utils.ts` contains the standard `cn()` helper for merging Tailwind classes
 
 ### Key Features Implementation
 
 **Keyboard Navigation** (lines 199-246):
-- Arrow keys navigate between cells
-- Enter/Down moves to next row
-- Cmd/Ctrl+B toggles bold
-- Cmd/Ctrl+I toggles italic
+
+-  Arrow keys navigate between cells
+-  Enter/Down moves to next row
+-  Cmd/Ctrl+B toggles bold
+-  Cmd/Ctrl+I toggles italic
 
 **Column Alignment** (lines 192-197):
-- Modifies separator line syntax (`:---:`, `---:`, `---`)
-- Alignment controls appear in table header
+
+-  Modifies separator line syntax (`:---:`, `---:`, `---`)
+-  Alignment controls appear in table header
 
 **Row/Column Operations**:
-- `addRow()` / `addColumn()`: Append new rows/columns
-- `deleteRow()` / `deleteColumn()`: Remove rows/columns (header row cannot be deleted)
-- Uses stable IDs (`row-${nextRowId++}`) to prevent React key issues during mutations
+
+-  `addRow()` / `addColumn()`: Append new rows/columns
+-  `deleteRow()` / `deleteColumn()`: Remove rows/columns (header row cannot be deleted)
+-  Uses stable IDs (`row-${nextRowId++}`) to prevent React key issues during mutations
 
 ## Build Configuration
 
 The `next.config.mjs` file contains important production build settings:
-- ESLint and TypeScript errors are ignored during builds
-- Images are unoptimized (for v0.app compatibility)
+
+-  ESLint and TypeScript errors are ignored during builds
+-  Images are unoptimized (for v0.app compatibility)
 
 This configuration suggests the project prioritizes deployment speed over strict type checking in CI/CD.
 

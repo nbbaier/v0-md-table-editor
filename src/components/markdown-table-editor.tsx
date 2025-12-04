@@ -1,9 +1,26 @@
 "use client";
 
-import { AlignCenter, AlignLeft, AlignRight, Trash2 } from "lucide-react";
+import {
+	AlignCenter,
+	AlignLeft,
+	AlignRight,
+	MoreHorizontal,
+	Trash2,
+} from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
+import { Button } from "./ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { Textarea } from "./ui/textarea";
 
 const defaultMarkdown = `| Name | Age | City |
 |------|-----|------|
@@ -466,80 +483,91 @@ export default function MarkdownTableEditor() {
 					</div>
 					<p className="mt-4 text-muted-foreground leading-relaxed">
 						A minimal tool for editing markdown tables. Paste or type markdown
-						below, edit visually in the table. Use ⌘Z to undo, ⌘⇧Z to redo,
-						arrow keys to navigate.
+						below, edit visually in the table. Use arrow keys to navigate.
 					</p>
 				</header>
-
 				{/* Source */}
 				<section className="mb-12">
 					<div className="flex items-baseline justify-between mb-4">
 						<h2 className="font-medium text-muted-foreground">Source</h2>
 						<div className="flex gap-4">
-							<button
+							<Button
 								onClick={undo}
+								variant="ghost"
+								size="xs"
 								disabled={historyIndex === 0}
-								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors rounded-none"
 							>
 								Undo
-							</button>
-							<button
+							</Button>
+							<Button
 								onClick={redo}
+								variant="ghost"
+								size="xs"
 								disabled={historyIndex === history.length - 1}
-								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors rounded-none"
 							>
 								Redo
-							</button>
-							<button
+							</Button>
+							<Button
 								onClick={copyToClipboard}
-								className="text-muted-foreground hover:text-foreground transition-colors"
+								variant="ghost"
+								size="xs"
+								className="text-muted-foreground hover:text-foreground transition-colors rounded-none"
 							>
 								{copied ? "Copied" : "Copy"}
-							</button>
+							</Button>
 						</div>
 					</div>
 
-					<textarea
+					<Textarea
 						value={markdown}
 						onChange={(e) => setMarkdown(e.target.value)}
-						className="w-full min-h-[200px] p-4 font-mono text-sm bg-transparent border border-border focus:border-foreground focus:outline-hidden resize-y"
+						className="w-full min-h-[200px] p-4 font-mono text-sm bg-transparent border border-border focus:border-foreground focus:outline-hidden resize-y rounded-none focus-visible:ring-0 "
 						placeholder="Paste your markdown table here..."
 					/>
 				</section>
-
 				{/* Editor */}
 				<section>
 					<div className="flex items-baseline justify-between mb-4">
 						<h2 className="font-medium text-muted-foreground">Editor</h2>
 						<div className="flex gap-4">
-							<button
+							<Button
 								onClick={importCSV}
-								className="text-muted-foreground hover:text-foreground transition-colors"
+								variant="ghost"
+								size="xs"
+								className="text-muted-foreground hover:text-foreground transition-colors rounded-none"
 							>
 								Import
-							</button>
-							<button
+							</Button>
+							<Button
 								onClick={exportCSV}
 								disabled={tableData.length === 0}
-								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+								variant="ghost"
+								size="xs"
+								className="text-muted-foreground hover:text-foreground transition-colors rounded-none"
 							>
 								Export
-							</button>
+							</Button>
 							<span className="text-border">·</span>
-							<button
+							<Button
 								onClick={addRow}
 								disabled={tableData.length === 0}
-								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+								variant="ghost"
+								size="xs"
+								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors rounded-none"
 							>
 								+ Row
-							</button>
-							<button
+							</Button>
+							<Button
 								onClick={addColumn}
+								variant="ghost"
+								size="xs"
 								disabled={tableData.length === 0}
-								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors rounded-none"
 							>
 								+ Column
-							</button>
+							</Button>
 						</div>
 					</div>
 
@@ -556,11 +584,15 @@ export default function MarkdownTableEditor() {
 							<table className="w-full border-collapse">
 								<thead>
 									<tr className="border-b border-border group/header">
-										<th className="w-8 p-2" />
+										<th className="w-8 p-2 border-r border-border" />
 										{tableData[0].map((_, colIndex) => (
 											<th
 												key={colIds[colIndex]}
-												className="p-2 text-left text-muted-foreground"
+												className={`p-2 text-left text-muted-foreground ${
+													colIndex < tableData[0].length - 1
+														? "border-r border-border"
+														: ""
+												}`}
 											>
 												{pendingDeleteCol === colIndex ? (
 													<div className="flex items-center gap-2 text-xs">
@@ -579,42 +611,48 @@ export default function MarkdownTableEditor() {
 														</button>
 													</div>
 												) : (
-													<div className="flex items-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity">
-														<button
-															onClick={() =>
-																handleAlignmentChange(colIndex, "left")
-															}
-															className={`p-1 hover:text-foreground ${alignments[colIndex] === "left" ? "text-foreground" : ""}`}
-															title="Align left"
-														>
-															<AlignLeft className="w-3.5 h-3.5" />
-														</button>
-														<button
-															onClick={() =>
-																handleAlignmentChange(colIndex, "center")
-															}
-															className={`p-1 hover:text-foreground ${alignments[colIndex] === "center" ? "text-foreground" : ""}`}
-															title="Align center"
-														>
-															<AlignCenter className="w-3.5 h-3.5" />
-														</button>
-														<button
-															onClick={() =>
-																handleAlignmentChange(colIndex, "right")
-															}
-															className={`p-1 hover:text-foreground ${alignments[colIndex] === "right" ? "text-foreground" : ""}`}
-															title="Align right"
-														>
-															<AlignRight className="w-3.5 h-3.5" />
-														</button>
-														<button
-															onClick={() => setPendingDeleteCol(colIndex)}
-															className="p-1 hover:text-destructive ml-1"
-															title="Delete column"
-														>
-															<Trash2 className="w-3.5 h-3.5" />
-														</button>
-													</div>
+													<DropdownMenu>
+														<DropdownMenuTrigger asChild>
+															<button
+																className="p-1 hover:text-foreground cursor-pointer"
+																title="Column options"
+															>
+																<MoreHorizontal className="w-3.5 h-3.5" />
+															</button>
+														</DropdownMenuTrigger>
+														<DropdownMenuContent align="start">
+															<DropdownMenuRadioGroup
+																value={alignments[colIndex] || "left"}
+																onValueChange={(value) =>
+																	handleAlignmentChange(
+																		colIndex,
+																		value as Alignment,
+																	)
+																}
+															>
+																<DropdownMenuRadioItem value="left">
+																	<AlignLeft className="w-4 h-4" />
+																	Align Left
+																</DropdownMenuRadioItem>
+																<DropdownMenuRadioItem value="center">
+																	<AlignCenter className="w-4 h-4" />
+																	Align Center
+																</DropdownMenuRadioItem>
+																<DropdownMenuRadioItem value="right">
+																	<AlignRight className="w-4 h-4" />
+																	Align Right
+																</DropdownMenuRadioItem>
+															</DropdownMenuRadioGroup>
+															<DropdownMenuSeparator />
+															<DropdownMenuItem
+																onClick={() => setPendingDeleteCol(colIndex)}
+																variant="destructive"
+															>
+																<Trash2 className="w-4 h-4" />
+																Delete Column
+															</DropdownMenuItem>
+														</DropdownMenuContent>
+													</DropdownMenu>
 												)}
 											</th>
 										))}
@@ -628,7 +666,7 @@ export default function MarkdownTableEditor() {
 												rowIndex === 0 ? "bg-muted/30" : ""
 											}`}
 										>
-											<td className="p-2 w-8 text-center">
+											<td className="p-2 w-8 text-center border-r border-border">
 												{rowIndex > 0 &&
 													(pendingDeleteRow === rowIndex ? (
 														<div className="flex flex-col gap-1 text-xs">
@@ -648,7 +686,7 @@ export default function MarkdownTableEditor() {
 													) : (
 														<button
 															onClick={() => setPendingDeleteRow(rowIndex)}
-															className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+															className="text-muted-foreground align-middle hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
 															title="Delete row"
 														>
 															<Trash2 className="w-3.5 h-3.5" />
@@ -656,7 +694,14 @@ export default function MarkdownTableEditor() {
 													))}
 											</td>
 											{row.map((cell, colIndex) => (
-												<td key={colIds[colIndex]} className="p-0">
+												<td
+													key={colIds[colIndex]}
+													className={`p-0 ${
+														colIndex < row.length - 1
+															? "border-r border-border"
+															: ""
+													}`}
+												>
 													<input
 														type="text"
 														value={cell}
@@ -701,7 +746,6 @@ export default function MarkdownTableEditor() {
 					)}
 				</section>
 			</div>
-			<Toaster />
 		</div>
 	);
 }

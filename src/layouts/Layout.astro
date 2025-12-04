@@ -16,7 +16,7 @@ const {
 <!doctype html>
 <html lang="en">
    <head>
-      <meta charSet="UTF-8" />
+      <meta charset="UTF-8" />
       <meta name="description" content={description} />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <link rel="icon" type="image/svg+xml" href="/icon.svg" />
@@ -25,6 +25,15 @@ const {
    </head>
    <body class="font-sans antialiased">
       <slot />
-      <Toaster client:load />
+      <Toaster
+         client:load
+         toastOptions={{
+            style: {
+               borderRadius: "0rem",
+            },
+         }}
+         richColors
+         position="top-right"
+      />
    </body>
 </html>
