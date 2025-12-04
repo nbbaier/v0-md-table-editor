@@ -10,6 +10,15 @@ import {
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+	csvToMarkdown,
+	generateCSV,
+	generateMarkdown,
+	parseMarkdownTable,
+	toggleBold,
+	toggleItalic,
+} from "@/lib/markdown-utils";
+import type { Alignment } from "@/types/table";
 import { Button } from "./ui/button";
 import {
 	DropdownMenu,
@@ -29,8 +38,6 @@ const defaultMarkdown = `| Name | Age | City |
 | Bob | 35 | Chicago |`;
 
 const STORAGE_KEY = "markdown-table-editor-content";
-
-type Alignment = "left" | "center" | "right";
 
 let nextRowId = 0;
 let nextColId = 0;
@@ -78,11 +85,9 @@ export default function MarkdownTableEditor() {
 	}, [markdown]);
 
 	useEffect(() => {
-		const lines = markdown
-			.trim()
-			.split("\n")
-			.filter((line) => line.trim());
-		if (lines.length < 2) {
+		const parsed = parseMarkdownTable(markdown);
+
+		if (!parsed) {
 			setTableData([]);
 			setAlignments([]);
 			setRowIds([]);
@@ -90,28 +95,9 @@ export default function MarkdownTableEditor() {
 			return;
 		}
 
-		const separatorLine = lines[1];
-		const separators = separatorLine
-			.split("|")
-			.slice(1, -1)
-			.map((sep) => sep.trim());
+		const { data: parsedData, alignments: parsedAlignments } = parsed;
 
-		const parsedAlignments: Alignment[] = separators.map((sep) => {
-			if (sep.startsWith(":") && sep.endsWith(":")) return "center";
-			if (sep.endsWith(":")) return "right";
-			return "left";
-		});
 		setAlignments(parsedAlignments);
-
-		const parsedData = lines
-			.filter((_, index) => index !== 1)
-			.map((line) =>
-				line
-					.split("|")
-					.slice(1, -1)
-					.map((cell) => cell.trim()),
-			);
-
 		setTableData(parsedData);
 
 		setRowIds((prevRowIds) => {
@@ -127,15 +113,15 @@ export default function MarkdownTableEditor() {
 		});
 
 		setColIds((prevColIds) => {
-			if (prevColIds.length === separators.length) return prevColIds;
-			if (separators.length > prevColIds.length) {
+			if (prevColIds.length === parsedAlignments.length) return prevColIds;
+			if (parsedAlignments.length > prevColIds.length) {
 				const newIds = [...prevColIds];
-				for (let i = prevColIds.length; i < separators.length; i++) {
+				for (let i = prevColIds.length; i < parsedAlignments.length; i++) {
 					newIds.push(`col-${nextColId++}`);
 				}
 				return newIds;
 			}
-			return separators.map(() => `col-${nextColId++}`);
+			return parsedAlignments.map(() => `col-${nextColId++}`);
 		});
 	}, [markdown]);
 
@@ -168,50 +154,10 @@ export default function MarkdownTableEditor() {
 	}, [historyIndex, history]);
 
 	const updateMarkdown = (data: string[][], aligns: Alignment[]) => {
-		if (data.length === 0) return;
-
-		const headers = data[0];
-		const rows = data.slice(1);
-
-		const separator = headers
-			.map((_, index) => {
-				const align = aligns[index] || "left";
-				if (align === "center") return ":---:";
-				if (align === "right") return "---:";
-				return "---";
-			})
-			.join(" | ");
-
-		const headerLine = headers.join(" | ");
-		const rowLines = rows.map((row) => row.join(" | "));
-
-		const newMarkdown =
-			rows.length > 0
-				? `| ${headerLine} |\n| ${separator} |\n| ${rowLines.join(" |\n| ")} |`
-				: `| ${headerLine} |\n| ${separator} |`;
-		setMarkdown(newMarkdown);
-	};
-
-	const isBold = (text: string) =>
-		text.startsWith("**") && text.endsWith("**") && text.length > 4;
-	const isItalic = (text: string) =>
-		text.startsWith("*") &&
-		text.endsWith("*") &&
-		text.length > 2 &&
-		!isBold(text);
-
-	const toggleBold = (text: string) => {
-		if (isBold(text)) {
-			return text.slice(2, -2);
+		const newMarkdown = generateMarkdown(data, aligns);
+		if (newMarkdown) {
+			setMarkdown(newMarkdown);
 		}
-		return `**${text}**`;
-	};
-
-	const toggleItalic = (text: string) => {
-		if (isItalic(text)) {
-			return text.slice(1, -1);
-		}
-		return `*${text}*`;
 	};
 
 	const handleCellChange = (
@@ -375,40 +321,6 @@ export default function MarkdownTableEditor() {
 		toast.success("Example loaded");
 	};
 
-	const parseCSV = (csvText: string): string[][] => {
-		const lines = csvText.trim().split("\n");
-		const result: string[][] = [];
-
-		for (const line of lines) {
-			const row: string[] = [];
-			let current = "";
-			let inQuotes = false;
-
-			for (let i = 0; i < line.length; i++) {
-				const char = line[i];
-				const nextChar = line[i + 1];
-
-				if (char === '"') {
-					if (inQuotes && nextChar === '"') {
-						current += '"';
-						i++;
-					} else {
-						inQuotes = !inQuotes;
-					}
-				} else if (char === "," && !inQuotes) {
-					row.push(current.trim());
-					current = "";
-				} else {
-					current += char;
-				}
-			}
-			row.push(current.trim());
-			result.push(row);
-		}
-
-		return result;
-	};
-
 	const importCSV = () => {
 		fileInputRef.current?.click();
 	};
@@ -421,28 +333,21 @@ export default function MarkdownTableEditor() {
 		reader.onload = (event) => {
 			const csvText = event.target?.result as string;
 			try {
-				const parsedData = parseCSV(csvText);
-				if (parsedData.length === 0) {
+				const newMarkdown = csvToMarkdown(csvText);
+				const parsed = parseMarkdownTable(newMarkdown);
+
+				if (!parsed) {
 					toast.error("The CSV file appears to be empty.");
 					return;
 				}
 
-				const headers = parsedData[0];
-				const rows = parsedData.slice(1);
-				const separator = headers.map(() => "---").join(" | ");
-				const headerLine = headers.join(" | ");
-				const rowLines = rows.map((row) => row.join(" | "));
-
-				const newMarkdown =
-					rows.length > 0
-						? `| ${headerLine} |\n| ${separator} |\n| ${rowLines.join(" |\n| ")} |`
-						: `| ${headerLine} |\n| ${separator} |`;
-
 				setMarkdown(newMarkdown);
-				toast.success(`Imported ${parsedData.length} rows`);
+				toast.success(`Imported ${parsed.data.length} rows`);
 			} catch (err) {
 				console.error("Error parsing CSV:", err);
-				toast.error("Failed to parse CSV file.");
+				toast.error(
+					err instanceof Error ? err.message : "Failed to parse CSV file.",
+				);
 			}
 		};
 
@@ -461,22 +366,7 @@ export default function MarkdownTableEditor() {
 		}
 
 		try {
-			const csvRows = tableData.map((row) => {
-				return row
-					.map((cell) => {
-						if (
-							cell.includes(",") ||
-							cell.includes('"') ||
-							cell.includes("\n")
-						) {
-							return `"${cell.replace(/"/g, '""')}"`;
-						}
-						return cell;
-					})
-					.join(",");
-			});
-
-			const csvContent = csvRows.join("\n");
+			const csvContent = generateCSV(tableData);
 			const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
 			const link = document.createElement("a");
 			const url = URL.createObjectURL(blob);
@@ -498,24 +388,41 @@ export default function MarkdownTableEditor() {
 
 	return (
 		<div className="min-h-screen font-mono text-sm">
-			<div className="max-w-3xl mx-auto px-8 py-12">
+			<div className="px-8 py-12 mx-auto max-w-3xl">
 				{/* Header */}
 				<header className="mb-12">
-					<div className="border-b border-foreground pb-4">
-						<h1 className="text-2xl font-serif tracking-tight">
-							Markdown Table Editor
-						</h1>
+					<div className="flex flex-col gap-5 items-start">
+						<div>
+							<h1 className="font-serif text-4xl font-bold tracking-tighter leading-none text-foreground">
+								Tabula
+							</h1>
+							<div className="flex gap-3 items-center mt-2">
+								<div className="w-8 h-1 rounded-full bg-foreground" />
+								<p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/80 font-medium">
+									Markdown Table Editor
+								</p>
+							</div>
+						</div>
+
+						{/* Description */}
+						<p className="max-w-lg font-sans text-base leading-relaxed text-muted-foreground">
+							A{" "}
+							<span className="font-medium text-foreground">
+								visual interface
+							</span>{" "}
+							for Markdown tables. Edit rows and columns with keyboard
+							shortcuts, import from CSV, and export
+							<span className="font-medium text-foreground">
+								{" "}
+								clean, formatted syntax
+							</span>
+							.
+						</p>
 					</div>
-					<p className="mt-4 text-muted-foreground leading-relaxed">
-						Paste markdown tables to edit them visually. Supports formatting,
-						alignment, row/column management, CSV import/export, keyboard
-						shortcuts, and undo/redo. Use arrow keys to navigate between cells
-						in the table editor.
-					</p>
 				</header>
 				{/* Source */}
 				<section className="mb-12">
-					<div className="flex items-baseline justify-between mb-4">
+					<div className="flex justify-between items-baseline mb-4">
 						<h2 className="font-medium text-muted-foreground">Source</h2>
 						<div className="flex gap-4">
 							<Button
@@ -524,7 +431,7 @@ export default function MarkdownTableEditor() {
 								size="xs"
 								disabled={historyIndex === 0}
 								title="Undo (Cmd+Z)"
-								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors rounded-none"
+								className="rounded-none transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30"
 							>
 								Undo
 							</Button>
@@ -534,7 +441,7 @@ export default function MarkdownTableEditor() {
 								size="xs"
 								disabled={historyIndex === history.length - 1}
 								title="Redo (Cmd+Shift+Z)"
-								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors rounded-none"
+								className="rounded-none transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30"
 							>
 								Redo
 							</Button>
@@ -543,7 +450,7 @@ export default function MarkdownTableEditor() {
 								variant="ghost"
 								size="xs"
 								title="Copy markdown (Cmd+C)"
-								className="text-muted-foreground hover:text-foreground transition-colors rounded-none"
+								className="rounded-none transition-colors text-muted-foreground hover:text-foreground"
 							>
 								{copied ? "Copied" : "Copy"}
 							</Button>
@@ -559,14 +466,14 @@ export default function MarkdownTableEditor() {
 				</section>
 				{/* Editor */}
 				<section>
-					<div className="flex items-baseline justify-between mb-4">
+					<div className="flex justify-between items-baseline mb-4">
 						<h2 className="font-medium text-muted-foreground">Editor</h2>
 						<div className="flex gap-4">
 							<Button
 								onClick={importCSV}
 								variant="ghost"
 								size="xs"
-								className="text-muted-foreground hover:text-foreground transition-colors rounded-none"
+								className="rounded-none transition-colors text-muted-foreground hover:text-foreground"
 							>
 								Import
 							</Button>
@@ -575,7 +482,7 @@ export default function MarkdownTableEditor() {
 								disabled={tableData.length === 0}
 								variant="ghost"
 								size="xs"
-								className="text-muted-foreground hover:text-foreground transition-colors rounded-none"
+								className="rounded-none transition-colors text-muted-foreground hover:text-foreground"
 							>
 								Export
 							</Button>
@@ -585,7 +492,7 @@ export default function MarkdownTableEditor() {
 								disabled={tableData.length === 0}
 								variant="ghost"
 								size="xs"
-								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors rounded-none"
+								className="rounded-none transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30"
 							>
 								+ Row
 							</Button>
@@ -594,7 +501,7 @@ export default function MarkdownTableEditor() {
 								variant="ghost"
 								size="xs"
 								disabled={tableData.length === 0}
-								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors rounded-none"
+								className="rounded-none transition-colors text-muted-foreground hover:text-foreground disabled:opacity-30"
 							>
 								+ Column
 							</Button>
@@ -610,11 +517,11 @@ export default function MarkdownTableEditor() {
 					/>
 
 					{tableData.length > 0 ? (
-						<div className="border border-border overflow-x-auto">
+						<div className="overflow-x-auto border border-border">
 							<table className="w-full border-collapse">
 								<thead>
 									<tr className="border-b border-border group/header">
-										<th className="w-8 p-2 border-r border-border" />
+										<th className="p-2 w-8 border-r border-border" />
 										{tableData[0].map((_, colIndex) => (
 											<th
 												key={colIds[colIndex]}
@@ -625,7 +532,7 @@ export default function MarkdownTableEditor() {
 												}`}
 											>
 												{pendingDeleteCol === colIndex ? (
-													<div className="flex items-center gap-2 text-xs">
+													<div className="flex gap-2 items-center text-xs">
 														<span>Delete?</span>
 														<button
 															onClick={() => confirmDeleteColumn(colIndex)}
@@ -644,7 +551,7 @@ export default function MarkdownTableEditor() {
 													<DropdownMenu>
 														<DropdownMenuTrigger asChild>
 															<button
-																className="p-1 hover:text-foreground cursor-pointer focus:outline-none"
+																className="p-1 cursor-pointer hover:text-foreground focus:outline-none"
 																title="Column options"
 															>
 																<MoreHorizontal className="w-3.5 h-3.5" />
@@ -716,7 +623,7 @@ export default function MarkdownTableEditor() {
 													) : (
 														<button
 															onClick={() => setPendingDeleteRow(rowIndex)}
-															className="text-muted-foreground align-middle hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+															className="align-middle opacity-0 transition-opacity text-muted-foreground hover:text-destructive group-hover:opacity-100"
 															title="Delete row"
 														>
 															<Trash2 className="w-3.5 h-3.5" />
@@ -762,8 +669,8 @@ export default function MarkdownTableEditor() {
 							</table>
 						</div>
 					) : (
-						<div className="border border-dashed border-border p-12 text-center">
-							<p className="text-muted-foreground mb-4">
+						<div className="p-12 text-center border border-dashed border-border">
+							<p className="mb-4 text-muted-foreground">
 								Paste a markdown table above to begin editing.
 							</p>
 							<button

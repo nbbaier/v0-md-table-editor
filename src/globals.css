@@ -30,7 +30,8 @@
 	--color-ring: var(--ring);
 
 	--font-sans: "Geist", "Geist Fallback", system-ui, sans-serif;
-	--font-serif: Georgia, serif;
+	--font-serif: "Libre Baskerville", serif;
+	/* --font-serif: "Georgia", serif; */
 	--font-mono: "Geist Mono", "Geist Mono Fallback", monospace;
 }
 
