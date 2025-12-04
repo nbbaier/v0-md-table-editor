@@ -1,8 +1,6 @@
-"use client";
-
 import { AlignCenter, AlignLeft, AlignRight, Trash2 } from "lucide-react";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ToastContainer, useToast } from "@/components/ui/toast";
 
 const defaultMarkdown = `| Name | Age | City |
@@ -59,7 +57,7 @@ export default function MarkdownTableEditor() {
 			setHistory(newHistory);
 			setHistoryIndex(newHistory.length - 1);
 		}
-	}, [markdown]);
+	}, [markdown, historyIndex, history, isUndoRedo]);
 
 	useEffect(() => {
 		const lines = markdown
@@ -105,6 +103,24 @@ export default function MarkdownTableEditor() {
 		setColIds(newColIds);
 	}, [markdown]);
 
+	const undo = useCallback(() => {
+		if (historyIndex > 0) {
+			setIsUndoRedo(true);
+			setHistoryIndex(historyIndex - 1);
+			setMarkdown(history[historyIndex - 1]);
+			info("Undone");
+		}
+	}, [historyIndex, history, info]);
+
+	const redo = useCallback(() => {
+		if (historyIndex < history.length - 1) {
+			setIsUndoRedo(true);
+			setHistoryIndex(historyIndex + 1);
+			setMarkdown(history[historyIndex + 1]);
+			info("Redone");
+		}
+	}, [historyIndex, history, info]);
+
 	// Keyboard shortcuts for undo/redo and escape to cancel
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
@@ -116,11 +132,7 @@ export default function MarkdownTableEditor() {
 			if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === "z") {
 				e.preventDefault();
 				undo();
-			} else if (
-				(e.metaKey || e.ctrlKey) &&
-				e.shiftKey &&
-				e.key === "z"
-			) {
+			} else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "z") {
 				e.preventDefault();
 				redo();
 			}
@@ -128,7 +140,7 @@ export default function MarkdownTableEditor() {
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [historyIndex, history]);
+	}, [undo, redo]);
 
 	const updateMarkdown = (data: string[][], aligns: Alignment[]) => {
 		if (data.length === 0) return;
@@ -303,24 +315,6 @@ export default function MarkdownTableEditor() {
 		success("Column deleted");
 	};
 
-	const undo = () => {
-		if (historyIndex > 0) {
-			setIsUndoRedo(true);
-			setHistoryIndex(historyIndex - 1);
-			setMarkdown(history[historyIndex - 1]);
-			info("Undone");
-		}
-	};
-
-	const redo = () => {
-		if (historyIndex < history.length - 1) {
-			setIsUndoRedo(true);
-			setHistoryIndex(historyIndex + 1);
-			setMarkdown(history[historyIndex + 1]);
-			info("Redone");
-		}
-	};
-
 	const copyToClipboard = async () => {
 		try {
 			await navigator.clipboard.writeText(markdown);
@@ -427,7 +421,11 @@ export default function MarkdownTableEditor() {
 			const csvRows = tableData.map((row) => {
 				return row
 					.map((cell) => {
-						if (cell.includes(",") || cell.includes('"') || cell.includes("\n")) {
+						if (
+							cell.includes(",") ||
+							cell.includes('"') ||
+							cell.includes("\n")
+						) {
 							return `"${cell.replace(/"/g, '""')}"`;
 						}
 						return cell;
@@ -458,7 +456,6 @@ export default function MarkdownTableEditor() {
 	return (
 		<div className="min-h-screen font-mono text-sm">
 			<div className="max-w-3xl mx-auto px-8 py-12">
-				{/* Header */}
 				<header className="mb-12">
 					<div className="border-b border-foreground pb-4">
 						<h1 className="text-2xl font-serif tracking-tight">
@@ -466,19 +463,18 @@ export default function MarkdownTableEditor() {
 						</h1>
 					</div>
 					<p className="mt-4 text-muted-foreground leading-relaxed">
-						A minimal tool for editing markdown tables. Paste or type markdown below, 
-						edit visually in the table. Use ⌘Z to undo, ⌘⇧Z to redo, arrow keys to navigate.
+						A minimal tool for editing markdown tables. Paste or type markdown
+						below, edit visually in the table. Use ⌘Z to undo, ⌘⇧Z to redo,
+						arrow keys to navigate.
 					</p>
 				</header>
 
-				{/* Source */}
 				<section className="mb-12">
 					<div className="flex items-baseline justify-between mb-4">
-						<h2 className="font-medium text-muted-foreground">
-							Source
-						</h2>
+						<h2 className="font-medium text-muted-foreground">Source</h2>
 						<div className="flex gap-4">
 							<button
+								type="button"
 								onClick={undo}
 								disabled={historyIndex === 0}
 								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
@@ -486,6 +482,7 @@ export default function MarkdownTableEditor() {
 								Undo
 							</button>
 							<button
+								type="button"
 								onClick={redo}
 								disabled={historyIndex === history.length - 1}
 								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
@@ -493,6 +490,7 @@ export default function MarkdownTableEditor() {
 								Redo
 							</button>
 							<button
+								type="button"
 								onClick={copyToClipboard}
 								className="text-muted-foreground hover:text-foreground transition-colors"
 							>
@@ -500,7 +498,7 @@ export default function MarkdownTableEditor() {
 							</button>
 						</div>
 					</div>
-					
+
 					<textarea
 						value={markdown}
 						onChange={(e) => setMarkdown(e.target.value)}
@@ -509,20 +507,19 @@ export default function MarkdownTableEditor() {
 					/>
 				</section>
 
-				{/* Editor */}
 				<section>
 					<div className="flex items-baseline justify-between mb-4">
-						<h2 className="font-medium text-muted-foreground">
-							Editor
-						</h2>
+						<h2 className="font-medium text-muted-foreground">Editor</h2>
 						<div className="flex gap-4">
 							<button
+								type="button"
 								onClick={importCSV}
 								className="text-muted-foreground hover:text-foreground transition-colors"
 							>
 								Import
 							</button>
 							<button
+								type="button"
 								onClick={exportCSV}
 								disabled={tableData.length === 0}
 								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
@@ -531,6 +528,7 @@ export default function MarkdownTableEditor() {
 							</button>
 							<span className="text-border">·</span>
 							<button
+								type="button"
 								onClick={addRow}
 								disabled={tableData.length === 0}
 								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
@@ -538,6 +536,7 @@ export default function MarkdownTableEditor() {
 								+ Row
 							</button>
 							<button
+								type="button"
 								onClick={addColumn}
 								disabled={tableData.length === 0}
 								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
@@ -562,17 +561,22 @@ export default function MarkdownTableEditor() {
 									<tr className="border-b border-border group/header">
 										<th className="w-8 p-2" />
 										{tableData[0].map((_, colIndex) => (
-											<th key={colIds[colIndex]} className="p-2 text-left text-muted-foreground">
+											<th
+												key={colIds[colIndex]}
+												className="p-2 text-left text-muted-foreground"
+											>
 												{pendingDeleteCol === colIndex ? (
 													<div className="flex items-center gap-2 text-xs">
 														<span>Delete?</span>
 														<button
+															type="button"
 															onClick={() => confirmDeleteColumn(colIndex)}
 															className="text-destructive hover:underline"
 														>
 															Yes
 														</button>
 														<button
+															type="button"
 															onClick={() => setPendingDeleteCol(null)}
 															className="hover:underline"
 														>
@@ -582,27 +586,37 @@ export default function MarkdownTableEditor() {
 												) : (
 													<div className="flex items-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity">
 														<button
-															onClick={() => handleAlignmentChange(colIndex, "left")}
+															type="button"
+															onClick={() =>
+																handleAlignmentChange(colIndex, "left")
+															}
 															className={`p-1 hover:text-foreground ${alignments[colIndex] === "left" ? "text-foreground" : ""}`}
 															title="Align left"
 														>
 															<AlignLeft className="w-3.5 h-3.5" />
 														</button>
 														<button
-															onClick={() => handleAlignmentChange(colIndex, "center")}
+															type="button"
+															onClick={() =>
+																handleAlignmentChange(colIndex, "center")
+															}
 															className={`p-1 hover:text-foreground ${alignments[colIndex] === "center" ? "text-foreground" : ""}`}
 															title="Align center"
 														>
 															<AlignCenter className="w-3.5 h-3.5" />
 														</button>
 														<button
-															onClick={() => handleAlignmentChange(colIndex, "right")}
+															type="button"
+															onClick={() =>
+																handleAlignmentChange(colIndex, "right")
+															}
 															className={`p-1 hover:text-foreground ${alignments[colIndex] === "right" ? "text-foreground" : ""}`}
 															title="Align right"
 														>
 															<AlignRight className="w-3.5 h-3.5" />
 														</button>
 														<button
+															type="button"
 															onClick={() => setPendingDeleteCol(colIndex)}
 															className="p-1 hover:text-destructive ml-1"
 															title="Delete column"
@@ -617,23 +631,25 @@ export default function MarkdownTableEditor() {
 								</thead>
 								<tbody>
 									{tableData.map((row, rowIndex) => (
-										<tr 
-											key={rowIds[rowIndex]} 
+										<tr
+											key={rowIds[rowIndex]}
 											className={`group border-b border-border last:border-b-0 ${
 												rowIndex === 0 ? "bg-muted/30" : ""
 											}`}
 										>
 											<td className="p-2 w-8 text-center">
-												{rowIndex > 0 && (
-													pendingDeleteRow === rowIndex ? (
+												{rowIndex > 0 &&
+													(pendingDeleteRow === rowIndex ? (
 														<div className="flex flex-col gap-1 text-xs">
 															<button
+																type="button"
 																onClick={() => confirmDeleteRow(rowIndex)}
 																className="text-destructive hover:underline"
 															>
 																Yes
 															</button>
 															<button
+																type="button"
 																onClick={() => setPendingDeleteRow(null)}
 																className="text-muted-foreground hover:underline"
 															>
@@ -642,14 +658,14 @@ export default function MarkdownTableEditor() {
 														</div>
 													) : (
 														<button
+															type="button"
 															onClick={() => setPendingDeleteRow(rowIndex)}
 															className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
 															title="Delete row"
 														>
 															<Trash2 className="w-3.5 h-3.5" />
 														</button>
-													)
-												)}
+													))}
 											</td>
 											{row.map((cell, colIndex) => (
 												<td key={colIds[colIndex]} className="p-0">
@@ -657,12 +673,20 @@ export default function MarkdownTableEditor() {
 														type="text"
 														value={cell}
 														onChange={(e) =>
-															handleCellChange(rowIndex, colIndex, e.target.value)
+															handleCellChange(
+																rowIndex,
+																colIndex,
+																e.target.value,
+															)
 														}
-														onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
+														onKeyDown={(e) =>
+															handleKeyDown(e, rowIndex, colIndex)
+														}
 														data-row={rowIndex}
 														data-col={colIndex}
-														style={{ textAlign: alignments[colIndex] || "left" }}
+														style={{
+															textAlign: alignments[colIndex] || "left",
+														}}
 														className={`w-full px-3 py-2 bg-transparent border-0 focus:outline-none focus:bg-muted/50 ${
 															rowIndex === 0 ? "font-medium" : ""
 														}`}
@@ -680,6 +704,7 @@ export default function MarkdownTableEditor() {
 								Paste a markdown table above to begin editing.
 							</p>
 							<button
+								type="button"
 								onClick={loadExample}
 								className="text-foreground hover:underline"
 							>
