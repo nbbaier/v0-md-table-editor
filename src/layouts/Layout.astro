@@ -1,5 +1,6 @@
 ---
 import "../styles/globals.css";
+import { Toaster } from "sonner";
 
 export interface Props {
    title?: string;
@@ -24,5 +25,6 @@ const {
    </head>
    <body class="font-sans antialiased">
       <slot />
+      <Toaster client:load />
    </body>
 </html>
