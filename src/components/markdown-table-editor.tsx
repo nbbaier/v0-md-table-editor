@@ -114,14 +114,32 @@ export default function MarkdownTableEditor() {
 
 		setTableData(parsedData);
 
-		const newRowIds = parsedData.map(() => `row-${nextRowId++}`);
-		setRowIds(newRowIds);
+		setRowIds((prevRowIds) => {
+			if (prevRowIds.length === parsedData.length) return prevRowIds;
+			if (parsedData.length > prevRowIds.length) {
+				const newIds = [...prevRowIds];
+				for (let i = prevRowIds.length; i < parsedData.length; i++) {
+					newIds.push(`row-${nextRowId++}`);
+				}
+				return newIds;
+			}
+			return parsedData.map(() => `row-${nextRowId++}`);
+		});
 
-		const newColIds = separators.map(() => `col-${nextColId++}`);
-		setColIds(newColIds);
+		setColIds((prevColIds) => {
+			if (prevColIds.length === separators.length) return prevColIds;
+			if (separators.length > prevColIds.length) {
+				const newIds = [...prevColIds];
+				for (let i = prevColIds.length; i < separators.length; i++) {
+					newIds.push(`col-${nextColId++}`);
+				}
+				return newIds;
+			}
+			return separators.map(() => `col-${nextColId++}`);
+		});
 	}, [markdown]);
 
-	// Keyboard shortcuts for undo/redo and escape to cancel
+	// Keyboard shortcuts for undo/redo, copy, and escape to cancel
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (e.key === "Escape") {
@@ -135,6 +153,13 @@ export default function MarkdownTableEditor() {
 			} else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "z") {
 				e.preventDefault();
 				redo();
+			} else if ((e.metaKey || e.ctrlKey) && e.key === "c") {
+				// Check if we're not in a text input (to avoid preventing default copy)
+				const target = e.target as HTMLElement;
+				if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
+					e.preventDefault();
+					copyToClipboard();
+				}
 			}
 		};
 
@@ -482,8 +507,10 @@ export default function MarkdownTableEditor() {
 						</h1>
 					</div>
 					<p className="mt-4 text-muted-foreground leading-relaxed">
-						A minimal tool for editing markdown tables. Paste or type markdown
-						below, edit visually in the table. Use arrow keys to navigate.
+						Paste markdown tables to edit them visually. Supports formatting,
+						alignment, row/column management, CSV import/export, keyboard
+						shortcuts, and undo/redo. Use arrow keys to navigate between cells
+						in the table editor.
 					</p>
 				</header>
 				{/* Source */}
@@ -496,6 +523,7 @@ export default function MarkdownTableEditor() {
 								variant="ghost"
 								size="xs"
 								disabled={historyIndex === 0}
+								title="Undo (Cmd+Z)"
 								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors rounded-none"
 							>
 								Undo
@@ -505,6 +533,7 @@ export default function MarkdownTableEditor() {
 								variant="ghost"
 								size="xs"
 								disabled={historyIndex === history.length - 1}
+								title="Redo (Cmd+Shift+Z)"
 								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors rounded-none"
 							>
 								Redo
@@ -513,6 +542,7 @@ export default function MarkdownTableEditor() {
 								onClick={copyToClipboard}
 								variant="ghost"
 								size="xs"
+								title="Copy markdown (Cmd+C)"
 								className="text-muted-foreground hover:text-foreground transition-colors rounded-none"
 							>
 								{copied ? "Copied" : "Copy"}
@@ -614,7 +644,7 @@ export default function MarkdownTableEditor() {
 													<DropdownMenu>
 														<DropdownMenuTrigger asChild>
 															<button
-																className="p-1 hover:text-foreground cursor-pointer"
+																className="p-1 hover:text-foreground cursor-pointer focus:outline-none"
 																title="Column options"
 															>
 																<MoreHorizontal className="w-3.5 h-3.5" />
