@@ -502,7 +502,7 @@ export default function MarkdownTableEditor() {
 					<textarea
 						value={markdown}
 						onChange={(e) => setMarkdown(e.target.value)}
-						className="w-full min-h-[200px] p-4 font-mono text-sm bg-transparent border border-border focus:border-foreground focus:outline-none resize-y"
+						className="w-full min-h-[200px] p-4 font-mono text-sm bg-transparent border border-border focus:border-foreground focus:outline-hidden resize-y"
 						placeholder="Paste your markdown table here..."
 					/>
 				</section>
@@ -675,7 +675,7 @@ export default function MarkdownTableEditor() {
 														style={{
 															textAlign: alignments[colIndex] || "left",
 														}}
-														className={`w-full px-3 py-2 bg-transparent border-0 focus:outline-none focus:bg-muted/50 ${
+														className={`w-full px-3 py-2 bg-transparent border-0 focus:outline-hidden focus:bg-muted/50 ${
 															rowIndex === 0 ? "font-medium" : ""
 														}`}
 													/>
