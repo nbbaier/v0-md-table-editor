@@ -1,35 +1,9 @@
 "use client";
 
-import {
-	AlignCenter,
-	AlignLeft,
-	AlignRight,
-	Check,
-	Copy,
-	Download,
-	Monitor,
-	Moon,
-	Plus,
-	Redo2,
-	Sun,
-	Trash2,
-	Undo2,
-	Upload,
-} from "lucide-react";
-import { useTheme } from "next-themes";
+import { AlignCenter, AlignLeft, AlignRight, Trash2 } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import rehypeStringify from "rehype-stringify";
-import remarkGfm from "remark-gfm";
-import remarkParse from "remark-parse";
-import remarkRehype from "remark-rehype";
-import { unified } from "unified";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { ToastContainer, useToast } from "@/components/ui/toast";
-import { LayoutNav } from "@/components/layout-nav";
 
 const defaultMarkdown = `| Name | Age | City |
 |------|-----|------|
@@ -40,37 +14,30 @@ const defaultMarkdown = `| Name | Age | City |
 const STORAGE_KEY = "markdown-table-editor-content";
 
 type Alignment = "left" | "center" | "right";
-type MarkdownTab = "edit" | "preview";
 
 let nextRowId = 0;
 let nextColId = 0;
 
 export default function MarkdownTableEditor() {
-	const { theme, setTheme } = useTheme();
 	const { toasts, closeToast, success, error, info } = useToast();
-	const [mounted, setMounted] = useState(false);
 	const [markdown, setMarkdown] = useState(() => {
 		if (typeof window !== "undefined") {
 			const saved = localStorage.getItem(STORAGE_KEY);
-			return saved || defaultMarkdown;
+			return saved || "";
 		}
-		return defaultMarkdown;
+		return "";
 	});
 	const [tableData, setTableData] = useState<string[][]>([]);
 	const [alignments, setAlignments] = useState<Alignment[]>([]);
 	const [rowIds, setRowIds] = useState<string[]>([]);
 	const [colIds, setColIds] = useState<string[]>([]);
 	const [copied, setCopied] = useState(false);
-	const [markdownTab, setMarkdownTab] = useState<MarkdownTab>("edit");
-	const [renderedHtml, setRenderedHtml] = useState("");
-	const [history, setHistory] = useState<string[]>([markdown]);
+	const [history, setHistory] = useState<string[]>([]);
 	const [historyIndex, setHistoryIndex] = useState(0);
 	const [isUndoRedo, setIsUndoRedo] = useState(false);
+	const [pendingDeleteRow, setPendingDeleteRow] = useState<number | null>(null);
+	const [pendingDeleteCol, setPendingDeleteCol] = useState<number | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
-
-	useEffect(() => {
-		setMounted(true);
-	}, []);
 
 	// Auto-save to localStorage
 	useEffect(() => {
@@ -86,7 +53,6 @@ export default function MarkdownTableEditor() {
 			return;
 		}
 
-		// Only add to history if markdown actually changed
 		if (history[historyIndex] !== markdown) {
 			const newHistory = history.slice(0, historyIndex + 1);
 			newHistory.push(markdown);
@@ -139,30 +105,14 @@ export default function MarkdownTableEditor() {
 		setColIds(newColIds);
 	}, [markdown]);
 
-	useEffect(() => {
-		const renderMarkdown = async () => {
-			try {
-				const file = await unified()
-					.use(remarkParse)
-					.use(remarkGfm)
-					.use(remarkRehype)
-					.use(rehypeStringify)
-					.process(markdown);
-
-				setRenderedHtml(String(file));
-			} catch (err) {
-				console.error("Error rendering markdown:", err);
-				setRenderedHtml("<p>Error rendering markdown</p>");
-				error("Failed to render markdown preview");
-			}
-		};
-
-		renderMarkdown();
-	}, [markdown, error]);
-
-	// Keyboard shortcuts for undo/redo
+	// Keyboard shortcuts for undo/redo and escape to cancel
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Escape") {
+				setPendingDeleteRow(null);
+				setPendingDeleteCol(null);
+				return;
+			}
 			if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key === "z") {
 				e.preventDefault();
 				undo();
@@ -315,7 +265,7 @@ export default function MarkdownTableEditor() {
 		setTableData(newData);
 		setRowIds([...rowIds, `row-${nextRowId++}`]);
 		updateMarkdown(newData, alignments);
-		success("Row added successfully");
+		success("Row added");
 	};
 
 	const addColumn = () => {
@@ -326,31 +276,20 @@ export default function MarkdownTableEditor() {
 		setAlignments(newAlignments);
 		setColIds([...colIds, `col-${nextColId++}`]);
 		updateMarkdown(newData, newAlignments);
-		success("Column added successfully");
+		success("Column added");
 	};
 
-	const deleteRow = (rowIndex: number) => {
-		if (rowIndex === 0) return;
-
-		const confirmed = window.confirm(
-			"Are you sure you want to delete this row?"
-		);
-		if (!confirmed) return;
-
+	const confirmDeleteRow = (rowIndex: number) => {
 		const newData = tableData.filter((_, index) => index !== rowIndex);
 		const newRowIds = rowIds.filter((_, index) => index !== rowIndex);
 		setTableData(newData);
 		setRowIds(newRowIds);
 		updateMarkdown(newData, alignments);
-		success("Row deleted successfully");
+		setPendingDeleteRow(null);
+		success("Row deleted");
 	};
 
-	const deleteColumn = (colIndex: number) => {
-		const confirmed = window.confirm(
-			"Are you sure you want to delete this column?"
-		);
-		if (!confirmed) return;
-
+	const confirmDeleteColumn = (colIndex: number) => {
 		const newData = tableData.map((row) =>
 			row.filter((_, index) => index !== colIndex),
 		);
@@ -360,7 +299,8 @@ export default function MarkdownTableEditor() {
 		setAlignments(newAlignments);
 		setColIds(newColIds);
 		updateMarkdown(newData, newAlignments);
-		success("Column deleted successfully");
+		setPendingDeleteCol(null);
+		success("Column deleted");
 	};
 
 	const undo = () => {
@@ -386,11 +326,16 @@ export default function MarkdownTableEditor() {
 			await navigator.clipboard.writeText(markdown);
 			setCopied(true);
 			setTimeout(() => setCopied(false), 2000);
-			success("Markdown copied to clipboard!");
+			success("Copied to clipboard");
 		} catch (err) {
 			console.error("Failed to copy to clipboard:", err);
-			error("Failed to copy to clipboard. Please try again.");
+			error("Failed to copy");
 		}
+	};
+
+	const loadExample = () => {
+		setMarkdown(defaultMarkdown);
+		success("Example loaded");
 	};
 
 	const parseCSV = (csvText: string): string[][] => {
@@ -408,22 +353,18 @@ export default function MarkdownTableEditor() {
 
 				if (char === '"') {
 					if (inQuotes && nextChar === '"') {
-						// Escaped quote
 						current += '"';
-						i++; // Skip next quote
+						i++;
 					} else {
-						// Toggle quote state
 						inQuotes = !inQuotes;
 					}
 				} else if (char === "," && !inQuotes) {
-					// End of field
 					row.push(current.trim());
 					current = "";
 				} else {
 					current += char;
 				}
 			}
-			// Add last field
 			row.push(current.trim());
 			result.push(row);
 		}
@@ -449,7 +390,6 @@ export default function MarkdownTableEditor() {
 					return;
 				}
 
-				// Create markdown from CSV data
 				const headers = parsedData[0];
 				const rows = parsedData.slice(1);
 				const separator = headers.map(() => "---").join(" | ");
@@ -462,19 +402,18 @@ export default function MarkdownTableEditor() {
 						: `| ${headerLine} |\n| ${separator} |`;
 
 				setMarkdown(newMarkdown);
-				success(`Imported CSV with ${parsedData.length} rows and ${headers.length} columns`);
+				success(`Imported ${parsedData.length} rows`);
 			} catch (err) {
 				console.error("Error parsing CSV:", err);
-				error("Failed to parse CSV file. Please check the file format.");
+				error("Failed to parse CSV file.");
 			}
 		};
 
 		reader.onerror = () => {
-			error("Failed to read the file. Please try again.");
+			error("Failed to read the file.");
 		};
 
 		reader.readAsText(file);
-		// Reset input so same file can be imported again
 		e.target.value = "";
 	};
 
@@ -485,11 +424,9 @@ export default function MarkdownTableEditor() {
 		}
 
 		try {
-			// Convert table data to CSV
 			const csvRows = tableData.map((row) => {
 				return row
 					.map((cell) => {
-						// Escape quotes and wrap in quotes if contains comma or quote
 						if (cell.includes(",") || cell.includes('"') || cell.includes("\n")) {
 							return `"${cell.replace(/"/g, '""')}"`;
 						}
@@ -499,8 +436,6 @@ export default function MarkdownTableEditor() {
 			});
 
 			const csvContent = csvRows.join("\n");
-
-			// Create download link
 			const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
 			const link = document.createElement("a");
 			const url = URL.createObjectURL(blob);
@@ -513,296 +448,223 @@ export default function MarkdownTableEditor() {
 			document.body.removeChild(link);
 			URL.revokeObjectURL(url);
 
-			success("CSV file downloaded successfully!");
+			success("CSV downloaded");
 		} catch (err) {
 			console.error("Error exporting CSV:", err);
-			error("Failed to export CSV. Please try again.");
+			error("Failed to export CSV.");
 		}
 	};
 
 	return (
-		<div className="container mx-auto p-6 max-w-7xl overflow-hidden">
-			<div className="mb-8">
-				<div className="flex items-center justify-between mb-6">
-					<div>
-						<h1 className="text-4xl font-bold mb-2 text-balance">
+		<div className="min-h-screen font-mono text-sm">
+			<div className="max-w-3xl mx-auto px-8 py-12">
+				{/* Header */}
+				<header className="mb-12">
+					<div className="border-b border-foreground pb-4">
+						<h1 className="text-2xl font-serif tracking-tight">
 							Markdown Table Editor
 						</h1>
-						<p className="text-muted-foreground text-lg">
-							{
-								"Paste your markdown table, edit it visually, and see changes in real-time"
-							}
-						</p>
 					</div>
-					{mounted && (
-						<div className="flex gap-1 border border-border rounded-md p-1">
-							<Button
-								variant={theme === "light" ? "default" : "ghost"}
-								size="sm"
-								onClick={() => setTheme("light")}
-								className="gap-2"
-								title="Light mode"
-							>
-								<Sun className="h-4 w-4" />
-							</Button>
-							<Button
-								variant={theme === "system" ? "default" : "ghost"}
-								size="sm"
-								onClick={() => setTheme("system")}
-								className="gap-2"
-								title="System theme"
-							>
-								<Monitor className="h-4 w-4" />
-							</Button>
-							<Button
-								variant={theme === "dark" ? "default" : "ghost"}
-								size="sm"
-								onClick={() => setTheme("dark")}
-								className="gap-2"
-								title="Dark mode"
-							>
-								<Moon className="h-4 w-4" />
-							</Button>
-						</div>
-					)}
-				</div>
-				<LayoutNav />
-			</div>
+					<p className="mt-4 text-muted-foreground leading-relaxed">
+						A minimal tool for editing markdown tables. Paste or type markdown below, 
+						edit visually in the table. Use ⌘Z to undo, ⌘⇧Z to redo, arrow keys to navigate.
+					</p>
+				</header>
 
-			<div className="grid lg:grid-cols-2 gap-6 min-w-0">
-				{/* Markdown Input */}
-				<Card className="p-6 min-w-0">
-					<div className="flex items-center justify-between mb-4">
-						<h2 className="text-xl font-semibold">Markdown Source</h2>
-						<div className="flex gap-2">
-							<Button
-								variant="outline"
-								size="sm"
+				{/* Source */}
+				<section className="mb-12">
+					<div className="flex items-baseline justify-between mb-4">
+						<h2 className="font-medium text-muted-foreground">
+							Source
+						</h2>
+						<div className="flex gap-4">
+							<button
 								onClick={undo}
 								disabled={historyIndex === 0}
-								className="gap-2 bg-transparent"
-								title="Undo (Cmd/Ctrl+Z)"
+								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
 							>
-								<Undo2 className="h-4 w-4" />
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
+								Undo
+							</button>
+							<button
 								onClick={redo}
 								disabled={historyIndex === history.length - 1}
-								className="gap-2 bg-transparent"
-								title="Redo (Cmd/Ctrl+Shift+Z)"
+								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
 							>
-								<Redo2 className="h-4 w-4" />
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
+								Redo
+							</button>
+							<button
 								onClick={copyToClipboard}
-								className="gap-2 bg-transparent"
+								className="text-muted-foreground hover:text-foreground transition-colors"
 							>
-								{copied ? (
-									<>
-										<Check className="h-4 w-4" />
-										{"Copied"}
-									</>
-								) : (
-									<>
-										<Copy className="h-4 w-4" />
-										{"Copy"}
-									</>
-								)}
-							</Button>
+								{copied ? "Copied" : "Copy"}
+							</button>
 						</div>
 					</div>
-					<Tabs
-						value={markdownTab}
-						onValueChange={(value: string) =>
-							setMarkdownTab(value as MarkdownTab)
-						}
-					>
-						<TabsList>
-							<TabsTrigger value="edit">Edit</TabsTrigger>
-							<TabsTrigger value="preview">Preview</TabsTrigger>
-						</TabsList>
-						<TabsContent value="edit">
-							<Textarea
-								value={markdown}
-								onChange={(e) => setMarkdown(e.target.value)}
-								className="font-mono text-sm min-h-[200px] resize-y"
-								placeholder="Paste your markdown table here..."
-							/>
-						</TabsContent>
-						<TabsContent value="preview">
-							<div
-								className="markdown-body min-h-[200px] overflow-x-auto p-4 rounded-md"
-								// biome-ignore lint/security/noDangerouslySetInnerHtml: HTML is sanitized by remark/rehype processors
-								dangerouslySetInnerHTML={{ __html: renderedHtml }}
-							/>
-						</TabsContent>
-					</Tabs>
-				</Card>
+					
+					<textarea
+						value={markdown}
+						onChange={(e) => setMarkdown(e.target.value)}
+						className="w-full min-h-[200px] p-4 font-mono text-sm bg-transparent border border-border focus:border-foreground focus:outline-none resize-y"
+						placeholder="Paste your markdown table here..."
+					/>
+				</section>
 
-				{/* Visual Table Editor */}
-				<Card className="p-6 min-w-0">
-					<div className="flex items-center justify-between mb-4">
-						<h2 className="text-xl font-semibold">Visual Editor</h2>
-						<div className="flex gap-2">
-							<Button
-								variant="outline"
-								size="sm"
+				{/* Editor */}
+				<section>
+					<div className="flex items-baseline justify-between mb-4">
+						<h2 className="font-medium text-muted-foreground">
+							Editor
+						</h2>
+						<div className="flex gap-4">
+							<button
 								onClick={importCSV}
-								className="gap-2 bg-transparent"
-								title="Import CSV file"
+								className="text-muted-foreground hover:text-foreground transition-colors"
 							>
-								<Upload className="h-4 w-4" />
-								{"Import CSV"}
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
+								Import
+							</button>
+							<button
 								onClick={exportCSV}
 								disabled={tableData.length === 0}
-								className="gap-2 bg-transparent"
-								title="Export to CSV file"
+								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
 							>
-								<Download className="h-4 w-4" />
-								{"Export CSV"}
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
+								Export
+							</button>
+							<span className="text-border">·</span>
+							<button
 								onClick={addRow}
 								disabled={tableData.length === 0}
-								className="gap-2 bg-transparent"
+								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
 							>
-								<Plus className="h-4 w-4" />
-								{"Row"}
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
+								+ Row
+							</button>
+							<button
 								onClick={addColumn}
 								disabled={tableData.length === 0}
-								className="gap-2 bg-transparent"
+								className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
 							>
-								<Plus className="h-4 w-4" />
-								{"Column"}
-							</Button>
+								+ Column
+							</button>
 						</div>
 					</div>
+
 					<input
 						ref={fileInputRef}
 						type="file"
 						accept=".csv"
 						onChange={handleFileImport}
-						style={{ display: "none" }}
+						className="hidden"
 					/>
 
 					{tableData.length > 0 ? (
-						<div className="overflow-x-auto overflow-y-auto max-h-[500px]">
-							<table className="border-collapse w-full">
+						<div className="border border-border overflow-x-auto">
+							<table className="w-full border-collapse">
 								<thead>
-									<tr>
-										<th className="w-8"></th>
+									<tr className="border-b border-border group/header">
+										<th className="w-8 p-2" />
 										{tableData[0].map((_, colIndex) => (
-											<th key={colIds[colIndex]} className="p-0">
-												<div className="flex gap-1 items-center justify-center py-1">
-													<div className="flex gap-0.5">
-														<Button
-															variant={
-																alignments[colIndex] === "left"
-																	? "default"
-																	: "ghost"
-															}
-															size="sm"
-															onClick={() =>
-																handleAlignmentChange(colIndex, "left")
-															}
-															className="h-6 w-6 p-0"
+											<th key={colIds[colIndex]} className="p-2 text-left text-muted-foreground">
+												{pendingDeleteCol === colIndex ? (
+													<div className="flex items-center gap-2 text-xs">
+														<span>Delete?</span>
+														<button
+															onClick={() => confirmDeleteColumn(colIndex)}
+															className="text-destructive hover:underline"
+														>
+															Yes
+														</button>
+														<button
+															onClick={() => setPendingDeleteCol(null)}
+															className="hover:underline"
+														>
+															No
+														</button>
+													</div>
+												) : (
+													<div className="flex items-center gap-1 opacity-0 group-hover/header:opacity-100 transition-opacity">
+														<button
+															onClick={() => handleAlignmentChange(colIndex, "left")}
+															className={`p-1 hover:text-foreground ${alignments[colIndex] === "left" ? "text-foreground" : ""}`}
 															title="Align left"
 														>
-															<AlignLeft className="h-3 w-3" />
-														</Button>
-														<Button
-															variant={
-																alignments[colIndex] === "center"
-																	? "default"
-																	: "ghost"
-															}
-															size="sm"
-															onClick={() =>
-																handleAlignmentChange(colIndex, "center")
-															}
-															className="h-6 w-6 p-0"
+															<AlignLeft className="w-3.5 h-3.5" />
+														</button>
+														<button
+															onClick={() => handleAlignmentChange(colIndex, "center")}
+															className={`p-1 hover:text-foreground ${alignments[colIndex] === "center" ? "text-foreground" : ""}`}
 															title="Align center"
 														>
-															<AlignCenter className="h-3 w-3" />
-														</Button>
-														<Button
-															variant={
-																alignments[colIndex] === "right"
-																	? "default"
-																	: "ghost"
-															}
-															size="sm"
-															onClick={() =>
-																handleAlignmentChange(colIndex, "right")
-															}
-															className="h-6 w-6 p-0"
+															<AlignCenter className="w-3.5 h-3.5" />
+														</button>
+														<button
+															onClick={() => handleAlignmentChange(colIndex, "right")}
+															className={`p-1 hover:text-foreground ${alignments[colIndex] === "right" ? "text-foreground" : ""}`}
 															title="Align right"
 														>
-															<AlignRight className="h-3 w-3" />
-														</Button>
+															<AlignRight className="w-3.5 h-3.5" />
+														</button>
+														<button
+															onClick={() => setPendingDeleteCol(colIndex)}
+															className="p-1 hover:text-destructive ml-1"
+															title="Delete column"
+														>
+															<Trash2 className="w-3.5 h-3.5" />
+														</button>
 													</div>
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => deleteColumn(colIndex)}
-														className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
-														title="Delete column"
-													>
-														<Trash2 className="h-3 w-3" />
-													</Button>
-												</div>
+												)}
 											</th>
 										))}
 									</tr>
 								</thead>
 								<tbody>
 									{tableData.map((row, rowIndex) => (
-										<tr key={rowIds[rowIndex]}>
-											<td className="p-0">
+										<tr 
+											key={rowIds[rowIndex]} 
+											className={`group border-b border-border last:border-b-0 ${
+												rowIndex === 0 ? "bg-muted/30" : ""
+											}`}
+										>
+											<td className="p-2 w-8 text-center">
 												{rowIndex > 0 && (
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => deleteRow(rowIndex)}
-														className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
-													>
-														<Trash2 className="h-3 w-3" />
-													</Button>
+													pendingDeleteRow === rowIndex ? (
+														<div className="flex flex-col gap-1 text-xs">
+															<button
+																onClick={() => confirmDeleteRow(rowIndex)}
+																className="text-destructive hover:underline"
+															>
+																Yes
+															</button>
+															<button
+																onClick={() => setPendingDeleteRow(null)}
+																className="text-muted-foreground hover:underline"
+															>
+																No
+															</button>
+														</div>
+													) : (
+														<button
+															onClick={() => setPendingDeleteRow(rowIndex)}
+															className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+															title="Delete row"
+														>
+															<Trash2 className="w-3.5 h-3.5" />
+														</button>
+													)
 												)}
 											</td>
 											{row.map((cell, colIndex) => (
-												<td key={colIds[colIndex]} className="p-1">
+												<td key={colIds[colIndex]} className="p-0">
 													<input
 														type="text"
 														value={cell}
 														onChange={(e) =>
-															handleCellChange(
-																rowIndex,
-																colIndex,
-																e.target.value,
-															)
+															handleCellChange(rowIndex, colIndex, e.target.value)
 														}
-														onKeyDown={(e) =>
-															handleKeyDown(e, rowIndex, colIndex)
-														}
+														onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
 														data-row={rowIndex}
 														data-col={colIndex}
-														className={`w-full min-w-[100px] max-w-[300px] px-3 py-2 border rounded-md bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring ${
-															rowIndex === 0 ? "font-semibold bg-muted" : ""
+														style={{ textAlign: alignments[colIndex] || "left" }}
+														className={`w-full px-3 py-2 bg-transparent border-0 focus:outline-none focus:bg-muted/50 ${
+															rowIndex === 0 ? "font-medium" : ""
 														}`}
 													/>
 												</td>
@@ -813,11 +675,19 @@ export default function MarkdownTableEditor() {
 							</table>
 						</div>
 					) : (
-						<div className="flex items-center justify-center h-[500px] text-muted-foreground">
-							{"Paste a markdown table to get started"}
+						<div className="border border-dashed border-border p-12 text-center">
+							<p className="text-muted-foreground mb-4">
+								Paste a markdown table above to begin editing.
+							</p>
+							<button
+								onClick={loadExample}
+								className="text-foreground hover:underline"
+							>
+								Load example
+							</button>
 						</div>
 					)}
-				</Card>
+				</section>
 			</div>
 			<ToastContainer toasts={toasts} onClose={closeToast} />
 		</div>
