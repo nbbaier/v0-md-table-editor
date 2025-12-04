@@ -1,5 +1,5 @@
+import { Toaster } from "sonner";
 import MarkdownTableEditor from "@/components/markdown-table-editor";
-import { Toaster } from "@/components/ui/sonner";
 
 export default function App() {
 	return (
