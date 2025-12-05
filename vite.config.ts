@@ -80,7 +80,21 @@ export default defineConfig({
 						tag: "meta",
 						attrs: {
 							name: "twitter:card",
-							content: "summary_large_image",
+							content: "summary",
+						},
+					},
+					{
+						tag: "meta",
+						attrs: {
+							name: "twitter:site",
+							content: "@nbbaier",
+						},
+					},
+					{
+						tag: "meta",
+						attrs: {
+							name: "twitter:title",
+							content: metadata.title,
 						},
 					},
 					{
@@ -88,6 +102,13 @@ export default defineConfig({
 						attrs: {
 							name: "twitter:image",
 							content: metadata.ogImage,
+						},
+					},
+					{
+						tag: "meta",
+						attrs: {
+							name: "twitter:description",
+							content: metadata.description,
 						},
 					},
 				],
