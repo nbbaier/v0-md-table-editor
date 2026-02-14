@@ -40,11 +40,18 @@ export function parseMarkdownTable(markdown: string): {
 		return null;
 	}
 
+	const parseRow = (line: string) => {
+		const parts = line.split("|");
+		const trimmedLine = line.trim();
+		const startIndex = trimmedLine.startsWith("|") ? 1 : 0;
+		const endIndex = trimmedLine.endsWith("|")
+			? parts.length - 1
+			: parts.length;
+		return parts.slice(startIndex, endIndex).map((cell) => cell.trim());
+	};
+
 	const separatorLine = lines[1];
-	const separators = separatorLine
-		.split("|")
-		.slice(1, -1)
-		.map((sep) => sep.trim());
+	const separators = parseRow(separatorLine);
 
 	const alignments: Alignment[] = separators.map((sep) => {
 		if (sep.startsWith(":") && sep.endsWith(":")) return "center";
@@ -52,14 +59,7 @@ export function parseMarkdownTable(markdown: string): {
 		return "left";
 	});
 
-	const data = lines
-		.filter((_, index) => index !== 1)
-		.map((line) =>
-			line
-				.split("|")
-				.slice(1, -1)
-				.map((cell) => cell.trim()),
-		);
+	const data = lines.filter((_, index) => index !== 1).map(parseRow);
 
 	return { data, alignments };
 }

@@ -1,13 +1,13 @@
 # Agent Guidelines
 
 ## Commands
-- **Build**: `npm run build` (Next.js build)
+- **Build**: `npm run build` (Vite build)
 - **Dev**: `npm run dev`
-- **Lint**: `npm run lint` (ESLint)
+- **Lint**: `npm run lint` (Biome)
 - **Test**: No test framework configured currently.
 
 ## Code Style & Conventions
-- **Stack**: Next.js 15 (App Router), React 19, Tailwind CSS 4.x, shadcn/ui.
+- **Stack**: Vite, React 19, Tailwind CSS 4.x, shadcn/ui.
 - **Formatting**: Use 2 spaces indentation. Follow ESLint rules.
 - **Naming**: `kebab-case` for files (e.g., `markdown-table-editor.tsx`), `PascalCase` for components.
 - **Imports**: Use `@/` alias for project root. prefer named imports.
