@@ -82,7 +82,7 @@ export default function MarkdownTableEditor() {
 			setHistory(newHistory);
 			setHistoryIndex(newHistory.length - 1);
 		}
-	}, [markdown]);
+	}, [markdown, history, historyIndex, isUndoRedo]);
 
 	useEffect(() => {
 		const parsed = parseMarkdownTable(markdown);
@@ -553,6 +553,7 @@ export default function MarkdownTableEditor() {
 															<button
 																className="p-1 cursor-pointer hover:text-foreground focus:outline-none"
 																title="Column options"
+																aria-label="Column options"
 															>
 																<MoreHorizontal className="w-3.5 h-3.5" />
 															</button>
@@ -625,6 +626,7 @@ export default function MarkdownTableEditor() {
 															onClick={() => setPendingDeleteRow(rowIndex)}
 															className="align-middle opacity-0 transition-opacity text-muted-foreground hover:text-destructive group-hover:opacity-100"
 															title="Delete row"
+															aria-label="Delete row"
 														>
 															<Trash2 className="w-3.5 h-3.5" />
 														</button>
